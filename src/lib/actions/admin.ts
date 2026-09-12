@@ -5,7 +5,9 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser, isAdmin } from "@/lib/auth"
 import { TEAM_STATUSES } from "@/lib/database.types"
 import type { TeamMember, WinnersEntry } from "@/lib/database.types"
-import { genPassword, sanitizeFileName } from "@/lib/csv"
+import { genPassword } from "@/lib/csv"
+import { sanitizeFileName } from "@/lib/validate"
+import type { User } from "@supabase/supabase-js"
 
 export interface ActionResult {
   ok: boolean
@@ -39,11 +41,36 @@ export interface ResetPasswordResult extends ActionResult {
   password?: string
 }
 
-async function requireAdminAction(): Promise<string | null> {
+export interface ImportScoresResult extends ActionResult {
+  savedCount?: number
+  errors?: string[]
+}
+
+async function requireAdminAction(): Promise<User | null> {
   const user = await getSessionUser()
-  if (!user) return "Not signed in."
-  if (!(await isAdmin(user.id))) return "Admins only."
-  return null
+  if (!user) return null
+  if (!(await isAdmin(user.id))) return null
+  return user
+}
+
+async function audit(
+  admin: ReturnType<typeof createAdminClient>,
+  user: User | null,
+  action: string,
+  target = "",
+  details?: Record<string, unknown>
+) {
+  if (!user) return
+  await admin
+    .from("admin_audit")
+    .insert({
+      actor_user_id: user.id,
+      actor_email: user.email ?? "",
+      action,
+      target,
+      details: (details ?? null) as never,
+    })
+    .then(() => undefined, () => undefined)
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -51,8 +78,8 @@ const ROUNDS = ["round1", "final"] as const
 type Round = (typeof ROUNDS)[number]
 
 export async function importTeamsConfirmAction(_prev: ImportResult, formData: FormData): Promise<ImportResult> {
-  const denied = await requireAdminAction()
-  if (denied) return { ok: false, error: denied }
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
 
   let teams: ImportPayloadTeam[]
   try {
@@ -137,27 +164,30 @@ export async function importTeamsConfirmAction(_prev: ImportResult, formData: Fo
     created++
   }
 
+  await audit(admin, user, "teams.import", `${created} teams`, { created, skipped: errors.length })
+
   revalidatePath("/admin/teams")
   revalidatePath("/admin/round1")
   return { ok: created > 0, createdCount: created, credentials, errors }
 }
 
 export async function updateTeamStatusAction(formData: FormData): Promise<void> {
-  const denied = await requireAdminAction()
-  if (denied) return
+  const user = await requireAdminAction()
+  if (!user) return
   const teamId = String(formData.get("teamId") ?? "")
   const status = String(formData.get("status") ?? "")
   if (!teamId || !TEAM_STATUSES.includes(status as never)) return
   const admin = createAdminClient()
   await admin.from("teams").update({ status: status as never }).eq("id", teamId)
+  await audit(admin, user, "team.status", teamId, { status })
   revalidatePath("/admin/teams")
   revalidatePath("/admin/round1")
   revalidatePath("/admin/final")
 }
 
 export async function resetTeamPasswordAction(_prev: ResetPasswordResult, formData: FormData): Promise<ResetPasswordResult> {
-  const denied = await requireAdminAction()
-  if (denied) return { ok: false, error: denied }
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
   const teamId = String(formData.get("teamId") ?? "")
   if (!teamId) return { ok: false, error: "Missing team." }
 
@@ -168,25 +198,27 @@ export async function resetTeamPasswordAction(_prev: ResetPasswordResult, formDa
   const password = genPassword()
   const { error } = await admin.auth.admin.updateUserById(team.auth_user_id, { password })
   if (error) return { ok: false, error: error.message }
+  await audit(admin, user, "team.reset_password", team.team_code)
   revalidatePath("/admin/teams")
   return { ok: true, password, message: `New password for ${team.team_code} (${team.leader_email}):` }
 }
 
 export async function deleteTeamAction(formData: FormData): Promise<void> {
-  const denied = await requireAdminAction()
-  if (denied) return
+  const user = await requireAdminAction()
+  if (!user) return
   const teamId = String(formData.get("teamId") ?? "")
   if (!teamId) return
   const admin = createAdminClient()
-  const { data: team } = await admin.from("teams").select("auth_user_id").eq("id", teamId).maybeSingle()
+  const { data: team } = await admin.from("teams").select("auth_user_id, team_code").eq("id", teamId).maybeSingle()
   await admin.from("teams").delete().eq("id", teamId)
   if (team?.auth_user_id) await admin.auth.admin.deleteUser(team.auth_user_id).catch(() => {})
+  await audit(admin, user, "team.delete", team?.team_code ?? teamId)
   revalidatePath("/admin/teams")
 }
 
 export async function upsertProblemStatementAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  const denied = await requireAdminAction()
-  if (denied) return { ok: false, error: denied }
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
 
   const id = String(formData.get("id") ?? "")
   const code = String(formData.get("code") ?? "").trim().slice(0, 20)
@@ -203,33 +235,45 @@ export async function upsertProblemStatementAction(_prev: ActionResult, formData
     : await admin.from("problem_statements").insert({ code, title, description, max_teams: maxTeams, is_active: isActive })
 
   if (error) return { ok: false, error: error.message.includes("duplicate") ? "A problem statement with this code already exists." : error.message }
+  await audit(admin, user, id ? "ps.update" : "ps.create", code, { max_teams: maxTeams, is_active: isActive })
   revalidatePath("/admin/problem-statements")
   return { ok: true, message: id ? "Problem statement updated." : "Problem statement added." }
 }
 
 export async function deleteProblemStatementAction(formData: FormData): Promise<void> {
-  const denied = await requireAdminAction()
-  if (denied) return
+  const user = await requireAdminAction()
+  if (!user) return
   const id = Number(formData.get("id") ?? 0)
   if (!id) return
   const admin = createAdminClient()
-  const { data: ps } = await admin.from("problem_statements").select("taken_count").eq("id", id).maybeSingle()
+  const { data: ps } = await admin.from("problem_statements").select("code, taken_count").eq("id", id).maybeSingle()
   if (ps && ps.taken_count > 0) {
     await admin.from("problem_statements").update({ is_active: false }).eq("id", id)
+    await audit(admin, user, "ps.deactivate", ps.code)
   } else {
     await admin.from("problem_statements").delete().eq("id", id)
+    await audit(admin, user, "ps.delete", ps?.code ?? String(id))
   }
   revalidatePath("/admin/problem-statements")
 }
 
+async function roundIsPublished(admin: ReturnType<typeof createAdminClient>, round: string): Promise<boolean> {
+  const { data } = await admin.from("leaderboard_visibility").select("is_published").eq("round", round).maybeSingle()
+  return !!data?.is_published
+}
+
 export async function saveScoresAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  const denied = await requireAdminAction()
-  if (denied) return { ok: false, error: denied }
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
 
   const round = String(formData.get("round") ?? "")
   if (!ROUNDS.includes(round as Round)) return { ok: false, error: "Invalid round." }
 
   const admin = createAdminClient()
+  if (await roundIsPublished(admin, round)) {
+    return { ok: false, error: "This round's leaderboard is live. Unpublish it before editing scores — corrections must never happen behind a live leaderboard." }
+  }
+
   const { data: teams } = await admin.from("teams").select("id").order("team_code")
   if (!teams) return { ok: false, error: "Could not load teams." }
 
@@ -240,7 +284,7 @@ export async function saveScoresAction(_prev: ActionResult, formData: FormData):
     if (!raw) continue
     const score = Number(raw)
     if (!Number.isFinite(score) || score < 0 || score > 10000) {
-      return { ok: false, error: `Invalid score for a team (must be 0–10000).` }
+      return { ok: false, error: "Invalid score for a team (must be 0–10000)." }
     }
     rows.push({ team_id: t.id, round, total_score: Math.round(score * 100) / 100, notes })
   }
@@ -249,13 +293,72 @@ export async function saveScoresAction(_prev: ActionResult, formData: FormData):
     const { error } = await admin.from("scores").upsert(rows, { onConflict: "team_id,round" })
     if (error) return { ok: false, error: error.message }
   }
+  await audit(admin, user, "scores.save", round, { count: rows.length })
   revalidatePath("/admin/scoring")
   return { ok: true, message: `Saved ${rows.length} score${rows.length === 1 ? "" : "s"} for ${round}.` }
 }
 
+export async function importScoresAction(_prev: ImportScoresResult, formData: FormData): Promise<ImportScoresResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+
+  const round = String(formData.get("round") ?? "")
+  if (!ROUNDS.includes(round as Round)) return { ok: false, error: "Invalid round." }
+
+  let parsed: { team_code: string; score: string; notes: string }[]
+  try {
+    parsed = JSON.parse(String(formData.get("rows") ?? "[]"))
+    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("empty")
+    if (parsed.length > 500) throw new Error("too many")
+  } catch {
+    return { ok: false, error: "Invalid score data." }
+  }
+
+  const admin = createAdminClient()
+  if (await roundIsPublished(admin, round)) {
+    return { ok: false, error: "This round's leaderboard is live. Unpublish it before editing scores." }
+  }
+
+  const { data: teams } = await admin.from("teams").select("id, team_code")
+  if (!teams) return { ok: false, error: "Could not load teams." }
+  const codeToId = new Map(teams.map((t) => [t.team_code.toLowerCase(), t.id]))
+
+  const errors: string[] = []
+  const rows: { team_id: string; round: string; total_score: number; notes: string }[] = []
+  for (const r of parsed) {
+    const id = codeToId.get(String(r.team_code).trim().toLowerCase())
+    if (!id) {
+      errors.push(`Unknown team code: ${r.team_code}`)
+      continue
+    }
+    const score = Number(r.score)
+    if (!Number.isFinite(score) || score < 0 || score > 10000) {
+      errors.push(`Invalid score for ${r.team_code}`)
+      continue
+    }
+    rows.push({ team_id: id, round, total_score: Math.round(score * 100) / 100, notes: String(r.notes ?? "").slice(0, 500) })
+  }
+
+  if (rows.length === 0) {
+    return { ok: false, errors, error: "No valid rows to import." }
+  }
+
+  const { error } = await admin.from("scores").upsert(rows, { onConflict: "team_id,round" })
+  if (error) return { ok: false, error: error.message }
+
+  await audit(admin, user, "scores.import", round, { imported: rows.length, rejected: errors.length })
+  revalidatePath("/admin/scoring")
+  return {
+    ok: true,
+    savedCount: rows.length,
+    errors: errors.length > 0 ? errors : undefined,
+    message: `Imported ${rows.length} score${rows.length === 1 ? "" : "s"}${errors.length > 0 ? ` (${errors.length} skipped)` : ""}.`,
+  }
+}
+
 export async function setLeaderboardPublishedAction(formData: FormData): Promise<void> {
-  const denied = await requireAdminAction()
-  if (denied) return
+  const user = await requireAdminAction()
+  if (!user) return
   const round = String(formData.get("round") ?? "")
   const published = String(formData.get("published") ?? "") === "true"
   if (!ROUNDS.includes(round as Round)) return
@@ -266,13 +369,14 @@ export async function setLeaderboardPublishedAction(formData: FormData): Promise
     is_published: published,
     published_at: published ? new Date().toISOString() : null,
   }, { onConflict: "round" })
+  await audit(admin, user, published ? "leaderboard.publish" : "leaderboard.unpublish", round)
   revalidatePath("/admin/scoring")
   revalidatePath("/leaderboard")
 }
 
 export async function saveWinnersAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  const denied = await requireAdminAction()
-  if (denied) return { ok: false, error: denied }
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
 
   const title = String(formData.get("title") ?? "").trim().slice(0, 200) || "Winners"
   const publish = formData.get("publish") === "true"
@@ -311,14 +415,68 @@ export async function saveWinnersAction(_prev: ActionResult, formData: FormData)
     : await admin.from("announcements").insert(payload)
 
   if (error) return { ok: false, error: error.message }
+  await audit(admin, user, "winners.save", undefined, { publish, entries: clean.length })
   revalidatePath("/admin/announce-winners")
   revalidatePath("/leaderboard")
   return { ok: true, message: publish ? "Winners published." : "Winners saved (not published)." }
 }
 
+export async function saveNoticeAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+
+  const id = String(formData.get("id") ?? "")
+  const title = String(formData.get("title") ?? "").trim().slice(0, 200)
+  const text = String(formData.get("text") ?? "").trim().slice(0, 2000)
+
+  if (!title || !text) return { ok: false, error: "Title and text are required." }
+
+  const admin = createAdminClient()
+  const { error } = id
+    ? await admin.from("announcements").update({ title, body: text as never }).eq("id", id).eq("kind", "notice")
+    : await admin.from("announcements").insert({ kind: "notice", title, body: text as never, is_published: false })
+
+  if (error) return { ok: false, error: error.message }
+  await audit(admin, user, id ? "notice.update" : "notice.create", title)
+  revalidatePath("/admin/notices")
+  revalidatePath("/dashboard")
+  return { ok: true, message: id ? "Notice updated." : "Notice created (draft)." }
+}
+
+export async function setNoticePublishedAction(formData: FormData): Promise<void> {
+  const user = await requireAdminAction()
+  if (!user) return
+  const id = String(formData.get("id") ?? "")
+  const published = String(formData.get("published") ?? "") === "true"
+  if (!id) return
+
+  const admin = createAdminClient()
+  const { data: notice } = await admin.from("announcements").select("title").eq("id", id).eq("kind", "notice").maybeSingle()
+  await admin.from("announcements").update({
+    is_published: published,
+    published_at: published ? new Date().toISOString() : null,
+  }).eq("id", id).eq("kind", "notice")
+  await audit(admin, user, published ? "notice.publish" : "notice.unpublish", notice?.title ?? id)
+  revalidatePath("/admin/notices")
+  revalidatePath("/dashboard")
+}
+
+export async function deleteNoticeAction(formData: FormData): Promise<void> {
+  const user = await requireAdminAction()
+  if (!user) return
+  const id = String(formData.get("id") ?? "")
+  if (!id) return
+  const admin = createAdminClient()
+  const { data: notice } = await admin.from("announcements").select("title").eq("id", id).eq("kind", "notice").maybeSingle()
+  await admin.from("announcements").delete().eq("id", id).eq("kind", "notice")
+  await audit(admin, user, "notice.delete", notice?.title ?? id)
+  revalidatePath("/admin/notices")
+  revalidatePath("/dashboard")
+}
+
 export async function saveSettingsAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  const denied = await requireAdminAction()
-  if (denied) return { ok: false, error: denied }
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
 
   const keys = ["event_start", "ps_release_at", "round1_deadline", "final_deadline", "event_end"]
   const rows: { key: string; value: string | null }[] = []
@@ -337,6 +495,7 @@ export async function saveSettingsAction(_prev: ActionResult, formData: FormData
   const admin = createAdminClient()
   const { error } = await admin.from("event_settings").upsert(rows.map((r) => ({ key: r.key, value: r.value as never })), { onConflict: "key" })
   if (error) return { ok: false, error: error.message }
+  await audit(admin, user, "settings.save", undefined, Object.fromEntries(rows.map((r) => [r.key, r.value])))
   revalidatePath("/admin/settings")
   revalidatePath("/")
   revalidatePath("/dashboard")
@@ -344,8 +503,8 @@ export async function saveSettingsAction(_prev: ActionResult, formData: FormData
 }
 
 export async function galleryUploadAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  const denied = await requireAdminAction()
-  if (denied) return { ok: false, error: denied }
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
 
   const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0)
   const caption = String(formData.get("caption") ?? "").trim().slice(0, 200)
@@ -360,6 +519,7 @@ export async function galleryUploadAction(_prev: ActionResult, formData: FormDat
   const admin = createAdminClient()
   const { data: maxRow } = await admin.from("gallery_photos").select("sort_order").order("sort_order", { ascending: false }).limit(1).maybeSingle()
   let order = (maxRow?.sort_order ?? 0) + 1
+  let uploaded = 0
 
   for (const f of files) {
     const path = `photos/${Date.now()}-${sanitizeFileName(f.name)}`
@@ -367,16 +527,18 @@ export async function galleryUploadAction(_prev: ActionResult, formData: FormDat
     const { error: upErr } = await admin.storage.from("gallery").upload(path, buffer, { contentType: f.type || "image/jpeg", upsert: false })
     if (upErr) continue
     await admin.from("gallery_photos").insert({ storage_path: path, caption, sort_order: order++ })
+    uploaded++
   }
 
+  await audit(admin, user, "gallery.upload", undefined, { uploaded })
   revalidatePath("/admin/gallery")
   revalidatePath("/gallery")
-  return { ok: true, message: "Photos uploaded." }
+  return { ok: uploaded > 0, message: `Uploaded ${uploaded} photo${uploaded === 1 ? "" : "s"}.` }
 }
 
 export async function galleryDeleteAction(formData: FormData): Promise<void> {
-  const denied = await requireAdminAction()
-  if (denied) return
+  const user = await requireAdminAction()
+  if (!user) return
   const id = String(formData.get("id") ?? "")
   if (!id) return
   const admin = createAdminClient()
@@ -384,6 +546,7 @@ export async function galleryDeleteAction(formData: FormData): Promise<void> {
   if (!photo) return
   await admin.from("gallery_photos").delete().eq("id", id)
   await admin.storage.from("gallery").remove([photo.storage_path]).catch(() => {})
+  await audit(admin, user, "gallery.delete", id)
   revalidatePath("/admin/gallery")
   revalidatePath("/gallery")
 }

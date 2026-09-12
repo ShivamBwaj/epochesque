@@ -71,7 +71,7 @@ function initials(name: string) {
 
 export default function SpeakersPage() {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
+    <div className="mx-auto max-w-6xl px-4 pt-28 py-12">
       <SectionHeading
         kicker="LINEUP"
         title="Speakers"

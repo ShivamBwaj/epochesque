@@ -13,17 +13,17 @@ const links = [
 export function DashboardNav() {
   const pathname = usePathname()
   return (
-    <nav className="flex gap-1 overflow-x-auto rounded-xl border border-slate-800/60 bg-slate-950/40 p-1.5">
+    <nav className="flex gap-1 overflow-x-auto rounded-full border border-white/[0.08] bg-white/[0.03] p-1.5">
       {links.map((l) => {
         const active = pathname === l.href
         return (
           <Link
             key={l.href}
             href={l.href}
-            className={`whitespace-nowrap rounded-lg border px-3 py-1.5 text-sm transition ${
+            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm transition-all duration-300 ${
               active
-                ? "border-cyan-500/40 bg-cyan-950/40 text-cyan-200"
-                : "border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-slate-100"
+                ? "bg-accent-soft border border-accent/30 text-accent-hover"
+                : "border border-transparent text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
             }`}
           >
             {l.label}

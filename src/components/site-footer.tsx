@@ -2,21 +2,29 @@ import Link from "next/link"
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-slate-800/60 py-10">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 md:flex-row">
+    <footer className="border-t border-white/[0.06] py-12 mt-8">
+      <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-6 px-6 md:flex-row">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-6 w-6 items-center justify-center rounded bg-gradient-to-br from-indigo-500 to-cyan-400 font-mono text-[10px] font-black text-slate-950">
-            E
+          <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
+            <rect x="4" y="4" width="24" height="24" rx="5" stroke="currentColor" strokeWidth="2.5" />
+            <circle cx="11" cy="11" r="2.2" fill="#c2703e" />
+            <circle cx="21" cy="11" r="2.2" fill="currentColor" />
+            <circle cx="16" cy="16" r="2.2" fill="#c2703e" />
+          </svg>
+          <span className="text-sm font-semibold tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>
+            Epoch
           </span>
-          <span className="font-mono text-sm tracking-[0.2em] text-slate-400">EPOCH</span>
         </div>
-        <nav className="flex gap-5 text-xs text-slate-500">
-          <Link href="/speakers" className="hover:text-slate-300">Speakers</Link>
-          <Link href="/oc" className="hover:text-slate-300">Organizing Committee</Link>
-          <Link href="/leaderboard" className="hover:text-slate-300">Leaderboard</Link>
-          <Link href="/login" className="hover:text-slate-300">Team Login</Link>
+        <nav className="flex flex-wrap justify-center gap-5 text-xs text-muted-foreground">
+          <Link href="/speakers" className="hover:text-foreground transition-colors">Speakers</Link>
+          <Link href="/oc" className="hover:text-foreground transition-colors">Organizing Committee</Link>
+          <Link href="/leaderboard" className="hover:text-foreground transition-colors">Leaderboard</Link>
+          <Link href="/gallery" className="hover:text-foreground transition-colors">Gallery</Link>
+          <Link href="/login" className="hover:text-foreground transition-colors">Team Login</Link>
         </nav>
-        <p className="font-mono text-[11px] text-slate-600">built for the hack · MMXXVI</p>
+        <p className="font-mono text-[11px] text-muted/50">
+          built for the hack · <span style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}>may the dice favor you</span>
+        </p>
       </div>
     </footer>
   )

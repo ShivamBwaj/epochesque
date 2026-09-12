@@ -1,26 +1,33 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  weight: "400",
+  style: ["normal", "italic"],
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "Epoch — Hackathon",
+    default: "Epoch — Roll. Build. Ship.",
     template: "%s — Epoch",
   },
   description:
-    "Epoch — a two-day hackathon. Roll your problem statement, build, submit, and climb the leaderboard.",
+    "Epoch — a 48-hour hackathon where you don't choose your problem, you roll it. One locked-in problem statement, two days, one leaderboard that remembers everything.",
+  openGraph: {
+    title: "Epoch — Roll. Build. Ship.",
+    description: "A 48-hour hackathon. One roll of the dice decides your problem statement.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -30,9 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        <div className="bg-aurora" />
-        <div className="grid-lines" />
+      <body className={`${inter.variable} ${instrumentSerif.variable} noise-overlay`}>
         <div className="flex min-h-dvh flex-col">
           <SiteHeader />
           <main className="flex-1">{children}</main>

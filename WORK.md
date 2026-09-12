@@ -2,73 +2,63 @@
 
 Source of truth for ongoing work. Update this file as things get done or new issues appear.
 
-## Status: ✅ COMPLETE & VERIFIED (ready to deploy)
+## Status: ✅ v2 COMPLETE — Trench UI + full feature set + deep tests all green
 
-## Verification results (final gate — all green)
+## Final verification (all green)
 
 | Check | Result |
 |---|---|
 | `npm run typecheck` | 0 errors |
-| `npm run lint` | pass (2 acceptable `<img>` warnings on gallery pages) |
-| `npm run build` | pass, 20 routes |
-| `npm run test` (unit) | 11/11 pass (CSV engine + real Event_Details data) |
-| `npm run test:e2e` (Playwright, real Supabase) | 6/6 pass — full team+admin journey |
-| `npm run security:probe` | 16/16 denied — DB locked down |
-| Supabase advisors | only intentional findings remain (see below) |
-| DB state | pristine: 0 test rows, 1 admin user, buckets correct |
+| `npm run lint` | 0 errors (3 benign `<img>` warnings on gallery) |
+| `npm run build` | pass, 22 routes |
+| `npm run test` (unit) | 19/19 — CSV parser, scores parser, magic bytes, real registration data |
+| `npm run test:e2e` | 9/9 — full journeys incl. notices, audit, CSV score import, score-lock, fake-file rejection |
+| `npm run security:probe` | 16/16 denied |
+| DB state after tests | pristine (0 rows, 1 admin user, audit cleaned) |
+| `npm audit` | 0 vulnerabilities |
 
-## ✅ Everything done
+## v2 — what was added (on top of v1)
 
-### Infrastructure
-- [x] Next.js 16 App Router + TS + Tailwind v4 (`epoch/`), Vercel-ready
-- [x] `.env.local` + `.env.local.example` (gitignored secrets)
-- [x] npm scripts: dev/build/lint/typecheck/test/test:e2e/security:probe/db:migrate/seed:admin
+### UI — full Trench design port (`C:\Users\Loq\Documents\CRAP\Trench\landing-site`)
+- [x] Design system: warm amber accent (#c2703e), near-black bg (#0a0a0b), liquid-glass cards, noise texture overlay, aurora keyframes (globals.css)
+- [x] Fonts: Instrument Serif (display/italic accents) + Inter (body) via next/font
+- [x] Floating pill glass header with scroll state (site-nav.tsx, client) + server wrapper (site-header.tsx)
+- [x] AuroraBackground component (ported) powering the landing hero
+- [x] Landing page rebuilt: aurora hero (live badge, rotating words "prototype/pitch/debug/ship/win", countdown, CTAs) + DiceFeed (animated live roll feed, Trench alert-feed style) + StatsBar (animated numbers) + HowItWorks (6-step stagger cards) + RollSection (bento with animated dice) + FinalCta (glow card)
+- [x] Reveal/StaggerContainer/StaggerItem, AnimatedNumber, RotatingWords components (framer-motion)
+- [x] Shared ui.tsx restyled: pill buttons (accent/glass), accent-toned badges, surface inputs
+- [x] Login page, dashboard/admin navs (accent pill style), admin layout, public pages — all on new palette
+- [x] deps added: framer-motion, lucide-react; removed vulnerable xlsx (0 vulns now)
 
-### Database (migrations 0001–0004 applied, `supabase/migrations/`)
-- [x] Tables: teams, problem_statements (max_teams capacity), submissions, scores, leaderboard_visibility, announcements, admins, event_settings, gallery_photos
-- [x] RLS everywhere; anon/auth have NO direct access except: own team row, own submissions, own assigned PS, public timing/gallery
-- [x] scores/announcements/leaderboard_visibility/admins: zero API grants (service-role only, verified by probe)
-- [x] Publish-gated views: leaderboard_round1_public, leaderboard_final_public, winners_public (unpublished = 0 rows, probed)
-- [x] roll_problem_statement(): SECURITY DEFINER, atomic claim (FOR UPDATE SKIP LOCKED), idempotent, anon-revoked, search_path pinned
-- [x] 0002 revoked default TRUNCATE grants; 0003 advisor fixes; 0004 fixed ambiguous `id` OUT-param bug in roll fn
-- [x] Storage: `submissions` private (signed URLs for admin), `gallery` public-read
-- [x] Admin user: `admin@epoch.local` (password in .env.local)
+### Features
+- [x] **Score CSV import** (`/admin/scoring`): paste judges' Google Form summary as CSV (team_code,score,notes), client preview + validation, server-side team-code resolution, per-row errors (unknown teams rejected)
+- [x] **Notices broadcast** (`/admin/notices`): draft/publish/unpublish/delete announcements; published notices render on team dashboard (📣 banner in dashboard layout)
+- [x] **Admin audit log** (`admin_audit` table + `/admin/audit` page): every admin mutation logged (actor, action, target, details, timestamp); shown on admin overview
+- [x] **Admin overview dashboard** (`/admin`): live stats (teams by status, PS capacity, submissions), event gates panel, leaderboard publish state, recent audit feed
+- [x] **Magic-byte upload validation**: PPT/PPTX/PDF file contents verified (PDF %PDF, PPTX PK zip, PPT OLE) — renamed junk rejected server-side
+- [x] **DB-level score lock** (migration 0005 trigger): scores INSERT/UPDATE blocked while that round's leaderboard is published — even via service role; UI also guards with clear error
+- [x] **Security headers** (next.config.ts): CSP, HSTS, X-Frame-Options DENY, nosniff, referrer policy, permissions policy
+- [x] **SEO**: robots.ts (admin/dashboard disallowed), sitemap.ts, OG metadata
+- [x] **UX**: error.tsx boundary, dashboard/admin loading skeletons
+- [x] **Backup script**: `node scripts/export-backup.mjs` → JSON dump of all tables to backups/ (gitignored)
 
-### App (20 routes)
-- [x] Public: landing (countdown/timeline/roll explainer), speakers, OC, gallery, leaderboard (locked/published/winners states), login, 404
-- [x] Team dashboard: overview, problem-statement roll page (dice slot-machine, release gate, locked view), round1 PPT upload (25MB/type checks, replace-until-deadline), final GitHub submit (eligibility + deadline gates)
-- [x] Admin: teams table (status/reset password/delete), CSV import wizard (group by Team Id → junk flags → leader select → credentials CSV download), PS manager (capacity bars), round1/final review (signed download links, advance/eliminate), scoring grid + publish/unpublish with spec-mandated warning, winners podium (draft/publish/unpublish), settings (5 datetime gates), gallery manager
-- [x] Login rate limiting (per IP + per email)
+### Migrations
+- 0001–0004: schema, grants hygiene, advisor fixes, roll fn fix (unchanged from v1)
+- 0005: admin_audit table (RLS, service-role only) + guard_scores_locked trigger — APPLIED
 
-### Tests
-- [x] Unit: parser grouping, junk-row skip, duplicate-email flagging, quoted fields, CRLF, password strength, real-data validation (31 rows → 22 teams, leaders auto-picked)
-- [x] E2E (against real project, self-seeding/cleaning): public pages, auth redirects, team journey (login→roll→lock→upload), team blocked from admin, admin journey (score→publish→leaderboard live→winners→unpublish), bad credentials
+## v1 recap (unchanged, still in place)
+Auth (rate-limited login, team/admin roles), CSV team import wizard (Team Id grouping, leader select, credentials CSV), click-to-roll PS with atomic lock, round1 PPT + final GitHub submissions with deadline gates, scoring grid + publish toggles, winners podium, gallery, settings gates, RLS lockdown everywhere (verified by 16-probe security script), publish-gated leaderboard views.
 
-### Bugs found & fixed during testing
-1. roll fn: ambiguous `id` OUT-param collision in UPDATE (0004)
-2. e2e: `text=published` matched "unpublished" (substring race) → exact-match selector
-3. e2e: `button[type=submit]` clicked header LOGOUT instead of upload → text selector
-4. Orphan REPRO-*/E2E-* rows from debug scripts polluted roll pool → cleaned, DB now pristine
-5. Parser: duplicate-email flagging now marks ALL teams sharing an email, not just the later one
-
-## Remaining intentional advisor findings (do NOT "fix")
-- `security_definer_view` ERROR on 3 public views — required design: views must bypass table RLS to expose ONLY published rows
-- `rls_enabled_no_policy` INFO on 4 admin-only tables — deny-all is the intent
-- `roll_problem_statement` authenticated-executable WARN — that's the feature itself (validated + atomic)
-- `auth_leaked_password_protection` WARN — **dashboard toggle: user should enable in Auth settings (Auth → Providers → Email → Leaked password protection)**
-
-## ⏳ Next steps for the user
-- [ ] Deploy to Vercel: import repo, add env vars from `.env.local` (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY)
-- [ ] Enable "Leaked password protection" in Supabase Auth settings (dashboard)
-- [ ] Replace placeholder speakers/OC data in `src/app/speakers/page.tsx` + `src/app/oc/page.tsx`
-- [ ] Set event dates in `/admin/settings` (ps_release_at, deadlines)
-- [ ] Import real teams via `/admin/teams/import` (Excel → Save As CSV UTF-8; spam team 19100 will appear — uncheck it in the preview)
-- [ ] Add problem statements with capacities in `/admin/problem-statements`
-- [ ] Post-event: upload gallery photos, announce winners
-- [ ] Git init + commit when ready (not done — was never requested)
+## Next steps for the user (unchanged)
+- [ ] Deploy to Vercel: env vars NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (+ optional NEXT_PUBLIC_SITE_URL for sitemap)
+- [ ] Enable "Leaked password protection" in Supabase Auth settings (dashboard toggle)
+- [ ] Replace placeholder speakers/OC data (`src/app/speakers/page.tsx`, `src/app/oc/page.tsx`)
+- [ ] Set event dates in `/admin/settings`, import teams, add problem statements
+- [ ] Post-event: upload gallery, announce winners
+- [ ] `git remote add origin … && git push` when ready (repo is committed locally)
 
 ## Key facts
-- Admin login: `admin@epoch.local` / `E2E_ADMIN_PASSWORD` in .env.local (`Ep0ch-HZTGHEhoPaR6BSF4!9` at time of writing — change if this file is ever shared)
-- DB: pooler `aws-0-ap-southeast-2.pooler.supabase.com` (direct host is IPv6-only locally); MCP supabase-remote is read-only → DDL via `npm run db:migrate:file supabase/migrations/FILE.sql`
-- Real registration data: `../Event_Details.xlsx (1).xlsx` (33 rows, 22 real teams after junk skip)
-- `tests/fixtures/real-registration.csv` contains real PII — keep local, don't commit publicly
+- Admin login: `admin@epoch.local` / `E2E_ADMIN_PASSWORD` in .env.local
+- DB via pooler `aws-0-ap-southeast-2.pooler.supabase.com` (direct host is IPv6-only locally); MCP supabase-remote is read-only → DDL via `npm run db:migrate:file supabase/migrations/FILE.sql`
+- e2e seeds `E2E-*` rows + cleans up (incl. audit rows since run start); real data fixture at tests/fixtures/real-registration.csv is gitignored (PII)
+- Trench UI source: `C:\Users\Loq\Documents\CRAP\Trench\landing-site` (components/landing, aurora, reveal, rotating-words, stats patterns)

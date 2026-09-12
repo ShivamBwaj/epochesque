@@ -12,6 +12,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit: {
+        Row: { action: string; actor_email: string; actor_user_id: string | null; created_at: string; details: Json | null; id: string; target: string }
+        Insert: { action: string; actor_email?: string; actor_user_id?: string | null; created_at?: string; details?: Json | null; id?: string; target?: string }
+        Update: { action?: string; actor_email?: string; actor_user_id?: string | null; created_at?: string; details?: Json | null; id?: string; target?: string }
+        Relationships: []
+      }
       admins: {
         Row: { created_at: string; email: string; user_id: string }
         Insert: { created_at?: string; email: string; user_id: string }

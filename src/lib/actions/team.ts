@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getViewer } from "@/lib/auth"
 import { getEventTiming, deadlinePassed } from "@/lib/settings"
-import { sanitizeFileName } from "@/lib/csv"
+import { deckFileError, deckMagicError, sanitizeFileName } from "@/lib/validate"
 
 export interface SubmitState {
   ok?: boolean
@@ -13,8 +13,6 @@ export interface SubmitState {
   message?: string
 }
 
-const MAX_PPT_BYTES = 25 * 1024 * 1024
-const PPT_EXTS = [".ppt", ".pptx", ".pdf"]
 const GITHUB_RE = /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$/
 
 export async function rollProblemStatementAction(): Promise<{ ok: boolean; error?: string }> {
@@ -57,15 +55,16 @@ export async function submitRound1Action(_prev: SubmitState, formData: FormData)
 
   const file = formData.get("file")
   if (!(file instanceof File) || file.size === 0) return { error: "Choose a file to upload." }
-  const nameLower = file.name.toLowerCase()
-  if (!PPT_EXTS.some((ext) => nameLower.endsWith(ext))) {
-    return { error: "Only .ppt, .pptx or .pdf files are allowed." }
-  }
-  if (file.size > MAX_PPT_BYTES) return { error: "File is larger than 25 MB." }
+
+  const fileError = deckFileError(file.name, file.size)
+  if (fileError) return { error: fileError }
+
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const magicError = deckMagicError(file.name, buffer)
+  if (magicError) return { error: magicError }
 
   const safeName = sanitizeFileName(file.name)
   const path = `round1/${team.id}/${Date.now()}-${safeName}`
-  const buffer = Buffer.from(await file.arrayBuffer())
 
   const admin = createAdminClient()
   const { data: existing } = await admin
@@ -79,7 +78,6 @@ export async function submitRound1Action(_prev: SubmitState, formData: FormData)
     .from("submissions")
     .upload(path, buffer, { contentType: file.type || "application/octet-stream", upsert: true })
   if (upErr) return { error: "Upload failed. Try again." }
-
   const { error: dbErr } = await admin.from("submissions").upsert({
     team_id: team.id,
     round: "round1",

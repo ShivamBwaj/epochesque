@@ -17,6 +17,7 @@ export interface SeedData {
   teamId: string
   teamUserId: string
   psIds: number[]
+  startedAt: string
 }
 
 export async function seed(): Promise<SeedData> {
@@ -58,7 +59,7 @@ export async function seed(): Promise<SeedData> {
     throw new Error(`seed team failed: ${teamErr?.message}`)
   }
 
-  return { teamId: team.id, teamUserId: authUser.user.id, psIds: ps.map((p) => p.id) }
+  return { teamId: team.id, teamUserId: authUser.user.id, psIds: ps.map((p) => p.id), startedAt: new Date().toISOString() }
 }
 
 export async function cleanup(seedData: SeedData) {
@@ -81,4 +82,6 @@ export async function cleanup(seedData: SeedData) {
       { round: "final", is_published: false, published_at: null },
     ], { onConflict: "round" })
   await admin.from("announcements").delete().eq("kind", "winners")
+  await admin.from("announcements").delete().eq("kind", "notice")
+  await admin.from("admin_audit").delete().gte("created_at", seedData.startedAt)
 }

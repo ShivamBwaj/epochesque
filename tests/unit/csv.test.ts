@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { parseRegistrationCsv, sanitizeFileName, genPassword } from "@/lib/csv"
+import { parseRegistrationCsv, genPassword } from "@/lib/csv"
 
 const HEADERS = "Id,Name,Email,Ph_No,College,Payment Status,College Type,Team Id"
 
@@ -87,11 +87,6 @@ describe("parseRegistrationCsv", () => {
 })
 
 describe("helpers", () => {
-  it("sanitizeFileName strips dangerous characters", () => {
-    expect(sanitizeFileName("..\\evil path/name (1).pptx")).not.toMatch(/[\\\/ ]/)
-    expect(sanitizeFileName("deck.pptx")).toBe("deck.pptx")
-  })
-
   it("genPassword produces strong unique passwords", () => {
     const seen = new Set<string>()
     for (let i = 0; i < 200; i++) {

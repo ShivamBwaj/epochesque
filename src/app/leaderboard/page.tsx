@@ -147,7 +147,7 @@ export default async function LeaderboardPage() {
   const winnersTitle = winnerRow?.title ?? "Winners"
 
   return (
-    <div className="mx-auto max-w-6xl space-y-14 px-4 py-12">
+    <div className="mx-auto max-w-6xl space-y-14 px-4 pt-28 py-12">
       {winners.length > 0 ? (
         <section>
           <SectionHeading
