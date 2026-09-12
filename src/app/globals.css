@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+:root {
+  --bg: #05060f;
+  --panel: #0b0e1d;
+  --line: rgba(148, 163, 184, 0.14);
+  --accent: #22d3ee;
+  --accent2: #818cf8;
+}
+
+body {
+  background: var(--bg);
+  color: #e2e8f0;
+}
+
+.bg-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 15% -10%, rgba(99, 102, 241, 0.16), transparent 60%),
+    radial-gradient(50rem 35rem at 90% 0%, rgba(34, 211, 238, 0.12), transparent 60%),
+    radial-gradient(40rem 30rem at 50% 110%, rgba(129, 140, 248, 0.1), transparent 60%);
+}
+
+.grid-lines {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+  background-size: 3.5rem 3.5rem;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black, transparent 70%);
+}
+
+.hud-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #67e8f9;
+}
+
+.text-gradient {
+  background: linear-gradient(100deg, #a5b4fc 0%, #67e8f9 55%, #a7f3d0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.card {
+  background: linear-gradient(180deg, rgba(15, 18, 38, 0.85), rgba(9, 11, 24, 0.9));
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+}
+
+.card-hover {
+  transition: border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+}
+.card-hover:hover {
+  border-color: rgba(103, 232, 249, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px -18px rgba(34, 211, 238, 0.25);
+}
+
+.ring-glow {
+  box-shadow: 0 0 0 1px rgba(103, 232, 249, 0.25), 0 8px 50px -12px rgba(34, 211, 238, 0.35);
+}
+
+.dice-face {
+  animation: dice-roll 0.9s ease-in-out infinite;
+}
+@keyframes dice-roll {
+  0%, 100% { transform: rotate(-8deg) scale(1); }
+  50% { transform: rotate(8deg) scale(1.08); }
+}
+
+.fade-up {
+  animation: fade-up 500ms ease both;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+::selection {
+  background: rgba(103, 232, 249, 0.3);
+}
+
+input, select, textarea {
+  color-scheme: dark;
+}
