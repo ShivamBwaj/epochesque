@@ -40,6 +40,33 @@ export async function rollProblemStatementAction(): Promise<{ ok: boolean; error
   return { ok: true }
 }
 
+export interface UploadBeginResult {
+  ok: boolean
+  path?: string
+  signedUrl?: string
+  error?: string
+}
+
+export async function beginRound1UploadAction(fileName: string, fileSize: number): Promise<UploadBeginResult> {
+  const viewer = await getViewer()
+  if (!viewer || viewer.role !== "team" || !viewer.team) return { ok: false, error: "Not signed in as a team." }
+  const team = viewer.team
+
+  const timing = await getEventTiming()
+  if (deadlinePassed(timing.round1_deadline)) {
+    return { ok: false, error: "The Round 1 deadline has passed. Submissions are closed." }
+  }
+
+  const fileError = deckFileError(fileName, fileSize)
+  if (fileError) return { ok: false, error: fileError }
+
+  const path = `round1/${team.id}/${Date.now()}-${sanitizeFileName(fileName)}`
+  const admin = createAdminClient()
+  const { data, error } = await admin.storage.from("submissions").createSignedUploadUrl(path)
+  if (error || !data?.signedUrl) return { ok: false, error: "Could not start the upload. Try again." }
+  return { ok: true, path, signedUrl: data.signedUrl }
+}
+
 export async function submitRound1Action(_prev: SubmitState, formData: FormData): Promise<SubmitState> {
   const viewer = await getViewer()
   if (!viewer || viewer.role !== "team" || !viewer.team) return { error: "Not signed in as a team." }
@@ -50,20 +77,24 @@ export async function submitRound1Action(_prev: SubmitState, formData: FormData)
     return { error: "The Round 1 deadline has passed. Submissions are closed." }
   }
 
-  const file = formData.get("file")
-  if (!(file instanceof File) || file.size === 0) return { error: "Choose a file to upload." }
+  const path = String(formData.get("path") ?? "")
+  const fileName = String(formData.get("file_name") ?? "")
+  const fileSize = Number(formData.get("file_size") ?? 0)
 
-  const fileError = deckFileError(file.name, file.size)
+  if (!path.startsWith(`round1/${team.id}/`)) return { error: "Invalid upload path. Try again." }
+  const fileError = deckFileError(fileName, fileSize)
   if (fileError) return { error: fileError }
 
-  const buffer = Buffer.from(await file.arrayBuffer())
-  const magicError = deckMagicError(file.name, buffer)
-  if (magicError) return { error: magicError }
-
-  const safeName = sanitizeFileName(file.name)
-  const path = `round1/${team.id}/${Date.now()}-${safeName}`
-
   const admin = createAdminClient()
+  const { data: blob, error: downErr } = await admin.storage.from("submissions").download(path)
+  if (downErr || !blob) return { error: "Uploaded file not found. Upload it again." }
+  const head = Buffer.from(await blob.arrayBuffer())
+  const magicError = deckMagicError(fileName, head)
+  if (magicError) {
+    await admin.storage.from("submissions").remove([path]).catch(() => {})
+    return { error: magicError }
+  }
+
   const { data: existing } = await admin
     .from("submissions")
     .select("storage_path")
@@ -71,18 +102,14 @@ export async function submitRound1Action(_prev: SubmitState, formData: FormData)
     .eq("round", "round1")
     .maybeSingle()
 
-  const { error: upErr } = await admin.storage
-    .from("submissions")
-    .upload(path, buffer, { contentType: file.type || "application/octet-stream", upsert: true })
-  if (upErr) return { error: "Upload failed. Try again." }
   const { error: dbErr } = await admin.from("submissions").upsert({
     team_id: team.id,
     round: "round1",
     type: "ppt",
     url: null,
     storage_path: path,
-    file_name: file.name,
-    file_size: file.size,
+    file_name: fileName,
+    file_size: fileSize,
   }, { onConflict: "team_id,round" })
   if (dbErr) return { error: "Saved file but could not record submission. Contact organizers." }
 

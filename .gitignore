@@ -50,3 +50,5 @@ tests/fixtures/real-registration.csv
 
 
 vercel-login.log
+.vercel
+.env*

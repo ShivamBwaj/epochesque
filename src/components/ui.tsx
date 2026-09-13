@@ -69,7 +69,7 @@ export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: st
 const fieldClass =
   "w-full rounded-lg border border-white/[0.08] bg-surface/80 px-3 py-2 text-sm text-foreground placeholder:text-muted/60 focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/30 transition-colors"
 
-export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> }) {
   return <input className={`${fieldClass} ${className}`} {...props} />
 }
 

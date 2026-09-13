@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser, isAdmin } from "@/lib/auth"
 import type { TeamMember, WinnersEntry } from "@/lib/database.types"
 import { genPassword } from "@/lib/csv"
-import { sanitizeFileName } from "@/lib/validate"
+import { sanitizeFileName, imageFileError, imageMagicError } from "@/lib/validate"
 import type { User } from "@supabase/supabase-js"
 
 export interface ActionResult {
@@ -632,38 +632,49 @@ export async function saveSettingsAction(_prev: ActionResult, formData: FormData
   return { ok: true, message: "Event timing saved." }
 }
 
+export async function beginGalleryUploadAction(fileName: string, fileSize: number): Promise<UploadBeginResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+  if (!/\.(jpe?g|png|webp|gif)$/i.test(fileName)) return { ok: false, error: "Only image files are allowed." }
+  if (fileSize > 10 * 1024 * 1024) return { ok: false, error: "Each image must be under 10 MB." }
+
+  const admin = createAdminClient()
+  const path = `photos/${Date.now()}-${sanitizeFileName(fileName)}`
+  const { data, error } = await admin.storage.from("gallery").createSignedUploadUrl(path)
+  if (error || !data?.signedUrl) return { ok: false, error: "Could not start the upload. Try again." }
+  return { ok: true, path, signedUrl: data.signedUrl }
+}
+
 export async function galleryUploadAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireAdminAction()
   if (!user) return { ok: false, error: "Admins only." }
 
-  const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0)
   const caption = String(formData.get("caption") ?? "").trim().slice(0, 200)
-  if (files.length === 0) return { ok: false, error: "Choose at least one image." }
-  if (files.length > 20) return { ok: false, error: "Max 20 images per upload." }
 
-  for (const f of files) {
-    if (!/\.(jpe?g|png|webp|gif)$/i.test(f.name)) return { ok: false, error: "Only image files are allowed." }
-    if (f.size > 10 * 1024 * 1024) return { ok: false, error: "Each image must be under 10 MB." }
+  let paths: string[] = []
+  try {
+    paths = JSON.parse(String(formData.get("paths") ?? "[]"))
+    if (!Array.isArray(paths) || paths.length === 0) throw new Error("empty")
+    if (paths.length > 20) throw new Error("too many")
+    if (paths.some((p) => typeof p !== "string" || !p.startsWith("photos/"))) throw new Error("bad path")
+  } catch {
+    return { ok: false, error: "No uploaded photos to save. Upload images first." }
   }
 
   const admin = createAdminClient()
   const { data: maxRow } = await admin.from("gallery_photos").select("sort_order").order("sort_order", { ascending: false }).limit(1).maybeSingle()
   let order = (maxRow?.sort_order ?? 0) + 1
-  let uploaded = 0
+  let saved = 0
 
-  for (const f of files) {
-    const path = `photos/${Date.now()}-${sanitizeFileName(f.name)}`
-    const buffer = Buffer.from(await f.arrayBuffer())
-    const { error: upErr } = await admin.storage.from("gallery").upload(path, buffer, { contentType: f.type || "image/jpeg", upsert: false })
-    if (upErr) continue
-    await admin.from("gallery_photos").insert({ storage_path: path, caption, sort_order: order++ })
-    uploaded++
+  for (const path of paths as string[]) {
+    const { error: dbErr } = await admin.from("gallery_photos").insert({ storage_path: path, caption, sort_order: order++ })
+    if (!dbErr) saved++
   }
 
-  await audit(admin, user, "gallery.upload", undefined, { uploaded })
+  await audit(admin, user, "gallery.upload", undefined, { uploaded: saved })
   revalidatePath("/admin/gallery")
   revalidatePath("/gallery")
-  return { ok: uploaded > 0, message: `Uploaded ${uploaded} photo${uploaded === 1 ? "" : "s"}.` }
+  return { ok: saved > 0, message: `Uploaded ${saved} photo${saved === 1 ? "" : "s"}.` }
 }
 
 export async function galleryDeleteAction(formData: FormData): Promise<void> {
@@ -684,6 +695,26 @@ export async function galleryDeleteAction(formData: FormData): Promise<void> {
 const PEOPLE_KINDS = ["oc", "speaker"] as const
 type PeopleKind = (typeof PEOPLE_KINDS)[number]
 
+export interface UploadBeginResult {
+  ok: boolean
+  path?: string
+  signedUrl?: string
+  error?: string
+}
+
+export async function beginPersonPhotoUploadAction(fileName: string, fileSize: number): Promise<UploadBeginResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+  const imgError = imageFileError(fileName, fileSize)
+  if (imgError) return { ok: false, error: imgError }
+
+  const admin = createAdminClient()
+  const path = `people/${Date.now()}-${sanitizeFileName(fileName)}`
+  const { data, error } = await admin.storage.from("people").createSignedUploadUrl(path)
+  if (error || !data?.signedUrl) return { ok: false, error: "Could not start the photo upload. Try again." }
+  return { ok: true, path, signedUrl: data.signedUrl }
+}
+
 export async function upsertPersonAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireAdminAction()
   if (!user) return { ok: false, error: "Admins only." }
@@ -701,29 +732,30 @@ export async function upsertPersonAction(_prev: ActionResult, formData: FormData
     .map((t) => t.slice(0, 40))
   const sortOrder = Math.max(0, Math.min(9999, Number(formData.get("sort_order") ?? 0) || 0))
   const isPublished = formData.get("is_published") === "on" || formData.get("is_published") === "true"
+  const photoPath = String(formData.get("photo_path") ?? "").trim()
 
   if (!PEOPLE_KINDS.includes(kind as PeopleKind)) return { ok: false, error: "Invalid person kind." }
   if (!name) return { ok: false, error: "Name is required." }
-
-  const photoRaw = formData.get("photo")
-  const photoFile = photoRaw instanceof File && photoRaw.size > 0 ? photoRaw : null
-  if (photoFile) {
-    if (!/\.(jpe?g|png|webp)$/i.test(photoFile.name)) return { ok: false, error: "Photo must be a .jpg, .png or .webp image." }
-    if (photoFile.size > 5 * 1024 * 1024) return { ok: false, error: "Photo must be under 5 MB." }
-  }
+  if (photoPath && !photoPath.startsWith("people/")) return { ok: false, error: "Invalid photo path." }
 
   const admin = createAdminClient()
 
-  let photoPath: string | null = null
-  if (photoFile) {
-    const path = `people/${Date.now()}-${sanitizeFileName(photoFile.name)}`
-    const buffer = Buffer.from(await photoFile.arrayBuffer())
-    const { error: upErr } = await admin.storage.from("people").upload(path, buffer, { contentType: photoFile.type || "image/jpeg", upsert: false })
-    if (upErr) return { ok: false, error: `Photo upload failed: ${upErr.message}` }
-    photoPath = path
+  let verifiedPhotoPath: string | null = null
+  if (photoPath) {
+    const { data: blob, error: downErr } = await admin.storage.from("people").download(photoPath)
+    if (downErr || !blob) return { ok: false, error: "Uploaded photo not found. Upload it again." }
+    const head = Buffer.from(await blob.arrayBuffer())
+    const magicError = imageMagicError(photoPath, head)
+    if (magicError) {
+      await admin.storage.from("people").remove([photoPath]).catch(() => {})
+      return { ok: false, error: magicError }
+    }
+    verifiedPhotoPath = photoPath
     if (id) {
       const { data: existing } = await admin.from("people").select("photo_path").eq("id", id).maybeSingle()
-      if (existing?.photo_path) await admin.storage.from("people").remove([existing.photo_path]).catch(() => {})
+      if (existing?.photo_path && existing.photo_path !== photoPath) {
+        await admin.storage.from("people").remove([existing.photo_path]).catch(() => {})
+      }
     }
   }
 
@@ -735,7 +767,7 @@ export async function upsertPersonAction(_prev: ActionResult, formData: FormData
     tags: tags as never,
     sort_order: sortOrder,
     is_published: isPublished,
-    ...(photoPath ? { photo_path: photoPath } : {}),
+    ...(verifiedPhotoPath ? { photo_path: verifiedPhotoPath } : {}),
   }
 
   const { error } = id

@@ -1,0 +1,107 @@
+﻿
+> epoch@0.1.0 test:e2e
+> playwright test
+
+Γùç injected env (7) from .env.local // tip: Γîÿ override existing { override: true }
+node.exe : [WebServer] ΓÜá The Edge Runtime is deprecated. You can use the "nodejs" runtime instead. Learn more: 
+https://nextjs.org/docs/messages/edge-runtime-deprecated
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([WebServer] ΓÜá...time-deprecated:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[WebServer] ΓÜá Using edge runtime on a page currently disables static generation for that page
+[WebServer] ΓÜá metadataBase property in metadata export is not set for resolving social open graph or twitter images, 
+using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+[WebServer] ΓÜá metadataBase property in metadata export is not set for resolving social open graph or twitter images, 
+using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+
+Running 9 tests using 1 worker
+
+Γùç injected env (0) from .env.local // tip: Γîÿ custom filepath { path: '/custom/path/.env' }
+  ok 1 tests\e2e\full-flow.spec.ts:24:5 ΓÇ║ public pages render (2.5s)
+  ok 2 tests\e2e\full-flow.spec.ts:40:5 ΓÇ║ unauthenticated users are redirected from protected areas (380ms)
+  x  3 tests\e2e\full-flow.spec.ts:47:5 ΓÇ║ team journey: login, roll PS, lock, submit round 1 (14.3s)
+Γùç injected env (0) from .env.local // tip: Γîÿ override existing { override: true }
+  ok 4 tests\e2e\full-flow.spec.ts:73:5 ΓÇ║ team cannot see other teams or internal tables via the app (6.6s)
+[WebServer] Γ¿» Error: The destination stream closed early.
+[WebServer]     at ignore-listed frames {
+[WebServer]   digest: '2037337064'
+[WebServer] }
+  ok 5 tests\e2e\full-flow.spec.ts:80:5 ΓÇ║ admin journey: score, publish leaderboard, winners (33.2s)
+  ok 6 tests\e2e\full-flow.spec.ts:127:5 ΓÇ║ bad credentials are rejected (1.2s)
+[WebServer] Γ¿» Error: The destination stream closed early.
+[WebServer]     at ignore-listed frames {
+[WebServer]   digest: '2037337064'
+[WebServer] }
+  ok 7 tests\e2e\full-flow.spec.ts:132:5 ΓÇ║ admin: score CSV import, notices, audit trail (15.9s)
+  ok 8 tests\e2e\full-flow.spec.ts:164:5 ΓÇ║ team sees published notice on dashboard (3.0s)
+[WebServer] Γ¿» Error: The destination stream closed early.
+[WebServer]     at ignore-listed frames {
+[WebServer]   digest: '2037337064'
+[WebServer] }
+  x  9 tests\e2e\full-flow.spec.ts:170:5 ΓÇ║ team: fake pptx content rejected by magic bytes (24.9s)
+
+
+  1) tests\e2e\full-flow.spec.ts:47:5 ΓÇ║ team journey: login, roll PS, lock, submit round 1 ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('body')
+    Expected substring: "E2E Problem Statement"
+    Received string:    "EpochesqueSpeakersOCGalleryLeaderboardDashboardTEAM CONSOLEE2E Test Team mtzfusl0E2E-mtzfusl0round1LOGOUTOverviewProblem StatementSubmit R1Submit FinalYOUR MISSIONProblem StatementThe dice have spoken. This is what your team builds for Epochesque.PS-04LOCKEDLost & Found, SolvedCampus-scale lost item recovery without the spreadsheet.LOCKED IN AT 13 SEPT 2026, 12:04 PMThis pick is final ΓÇö no re-rolls. Read it twice, scope it right, build smart.EpochesqueSpeakersOrganizing CommitteeLeaderboardGalleryTeam Loginbuilt for the hack ┬╖ may the dice favor you"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" locator('body') with timeout 5000ms
+      - waiting for locator('body')
+        14 ├ù locator resolved to <body class="inter_fe8b9d92-module__LINzvG__variable instrument_serif_a23cefb0-module__9M2CJq__variable noise-overlay">ΓÇª</body>
+           - unexpected value "EpochesqueSpeakersOCGalleryLeaderboardDashboardTEAM CONSOLEE2E Test Team mtzfusl0E2E-mtzfusl0round1LOGOUTOverviewProblem StatementSubmit R1Submit FinalYOUR MISSIONProblem StatementThe dice have spoken. This is what your team builds for Epochesque.PS-04LOCKEDLost & Found, SolvedCampus-scale lost item recovery without the spreadsheet.LOCKED IN AT 13 SEPT 2026, 12:04 PMThis pick is final ΓÇö no re-rolls. Read it twice, scope it right, build smart.EpochesqueSpeakersOrganizing CommitteeLeaderboardGalleryTeam Loginbuilt for the hack ┬╖ may the dice favor you"
+
+
+      53 |   await page.click('button:has-text("Roll")')
+      54 |   await expect(page.locator("body")).toContainText("LOCKED IN AT", { timeout: 30_000 })
+    > 55 |   await expect(page.locator("body")).toContainText("E2E Problem Statement")
+         |                                      ^
+      56 |
+      57 |   await page.reload()
+      58 |   await expect(page.locator("body")).toContainText("LOCKED IN AT")
+        at C:\Users\Loq\Documents\CRAP\opencode drama\yeah i testing\epoch\tests\e2e\full-flow.spec.ts:55:38
+
+    Error Context: test-results\full-flow-team-journey-login-roll-PS-lock-submit-round-1\error-context.md
+
+    Error Context: test-results\full-flow-team-journey-login-roll-PS-lock-submit-round-1\error-context.md
+
+  2) tests\e2e\full-flow.spec.ts:170:5 ΓÇ║ team: fake pptx content rejected by magic bytes ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('body')
+    Expected substring: "not a valid PPTX"
+    Received string:    "EpochesqueSpeakersOCGalleryLeaderboardDashboardTEAM CONSOLEE2E Test Team mtzfvc3tE2E-mtzfvc3tregisteredLOGOUT≡ƒôú E2E Notice: decks due soonUpload your decks before the buzzer.OverviewProblem StatementSubmit R1Submit FinalROUND 1Submit your deckUpload your pitch deck as .ppt, .pptx or .pdf. Max 25 MB. Re-upload any time until the deadline ΓÇö the newest file wins.Nothing uploaded yet ΓÇö this slot is empty.UPLOADChoose a file to upload.Pitch deck (.ppt, .pptx or .pdf ΓÇö max 25 MB)Upload deckEpochesqueSpeakersOrganizing CommitteeLeaderboardGalleryTeam Loginbuilt for the hack ┬╖ may the dice favor you"
+    Timeout: 20000ms
+
+    Call log:
+      - Expect "toContainText" locator('body') with timeout 20000ms
+      - waiting for locator('body')
+        43 ├ù locator resolved to <body class="inter_fe8b9d92-module__LINzvG__variable instrument_serif_a23cefb0-module__9M2CJq__variable noise-overlay">ΓÇª</body>
+           - unexpected value "EpochesqueSpeakersOCGalleryLeaderboardDashboardTEAM CONSOLEE2E Test Team mtzfvc3tE2E-mtzfvc3tregisteredLOGOUT≡ƒôú E2E Notice: decks due soonUpload your decks before the buzzer.OverviewProblem StatementSubmit R1Submit FinalROUND 1Submit your deckUpload your pitch deck as .ppt, .pptx or .pdf. Max 25 MB. Re-upload any time until the deadline ΓÇö the newest file wins.Nothing uploaded yet ΓÇö this slot is empty.UPLOADChoose a file to upload.Pitch deck (.ppt, .pptx or .pdf ΓÇö max 25 MB)Upload deckEpochesqueSpeakersOrganizing CommitteeLeaderboardGalleryTeam Loginbuilt for the hack ┬╖ may the dice favor you"
+
+
+      179 |   })
+      180 |   await page.click('button:has-text("Upload deck")')
+    > 181 |   await expect(page.locator("body")).toContainText("not a valid PPTX", { timeout: 20_000 })
+          |                                      ^
+      182 | })
+      183 |
+        at C:\Users\Loq\Documents\CRAP\opencode drama\yeah i testing\epoch\tests\e2e\full-flow.spec.ts:181:38
+
+    Error Context: test-results\full-flow-team-fake-pptx-content-rejected-by-magic-bytes\error-context.md
+
+    Error Context: test-results\full-flow-team-fake-pptx-content-rejected-by-magic-bytes\error-context.md
+
+  2 failed
+    tests\e2e\full-flow.spec.ts:47:5 ΓÇ║ team journey: login, roll PS, lock, submit round 1 ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    tests\e2e\full-flow.spec.ts:170:5 ΓÇ║ team: fake pptx content rejected by magic bytes ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  7 passed (2.2m)

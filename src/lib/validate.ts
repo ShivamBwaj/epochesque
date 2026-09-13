@@ -25,6 +25,29 @@ export function deckMagicError(name: string, buffer: Buffer): string | null {
   return null
 }
 
+export function imageFileError(name: string, size: number): string | null {
+  const lower = name.toLowerCase()
+  if (!/\.(jpe?g|png|webp)$/.test(lower)) return "Only .jpg, .png or .webp images are allowed."
+  if (size > 5 * 1024 * 1024) return "Image is larger than 5 MB."
+  return null
+}
+
+export function imageMagicError(name: string, buffer: Buffer): string | null {
+  const head = buffer.subarray(0, 12)
+  const lower = name.toLowerCase()
+  const isJpg = head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff
+  const isPng = head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47
+  const isWebp = head.subarray(0, 4).toString("ascii") === "RIFF" && head.subarray(8, 12).toString("ascii") === "WEBP"
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+    if (!isJpg) return "This file's content is not a valid JPEG image."
+  } else if (lower.endsWith(".png")) {
+    if (!isPng) return "This file's content is not a valid PNG image."
+  } else if (lower.endsWith(".webp")) {
+    if (!isWebp) return "This file's content is not a valid WebP image."
+  }
+  return null
+}
+
 export function sanitizeFileName(name: string): string {
   return name.replace(/[^A-Za-z0-9._-]/g, "_").slice(-80)
 }

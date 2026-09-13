@@ -1,8 +1,8 @@
 "use client"
 
-import { useActionState, useState } from "react"
+import { useRef, useState } from "react"
 import type { Person } from "@/lib/database.types"
-import { deletePersonAction, upsertPersonAction } from "@/lib/actions/admin"
+import { deletePersonAction, upsertPersonAction, beginPersonPhotoUploadAction } from "@/lib/actions/admin"
 import type { ActionResult } from "@/lib/actions/admin"
 import { SubmitButton } from "@/components/submit-button"
 import { Alert, Badge, Button, Card, EmptyState, Input, Label, Textarea } from "@/components/ui"
@@ -38,9 +38,57 @@ function PersonSection({
   addLabel: string
   people: Person[]
 }) {
-  const [state, formAction] = useActionState<ActionResult, FormData>(upsertPersonAction, { ok: false })
+  const [state, setState] = useState<ActionResult>({ ok: false })
   const [editing, setEditing] = useState<Person | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState<string | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+  const photoRef = useRef<HTMLInputElement>(null)
   const rows = people.filter((p) => p.kind === kind)
+
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (busy) return
+    const form = formRef.current
+    if (!form) return
+    setBusy(true)
+    setState({ ok: false })
+    setProgress("Saving…")
+    try {
+      const fd = new FormData(form)
+      const photo = photoRef.current?.files?.[0]
+      if (photo && photo.size > 0) {
+        setProgress("Uploading photo…")
+        const begin = await beginPersonPhotoUploadAction(photo.name, photo.size)
+        if (!begin.ok || !begin.signedUrl || !begin.path) {
+          setState({ ok: false, error: begin.error ?? "Could not start the photo upload." })
+          return
+        }
+        const up = await fetch(begin.signedUrl, {
+          method: "PUT",
+          body: photo,
+          headers: { "Content-Type": photo.type || "image/jpeg" },
+        })
+        if (!up.ok) {
+          setState({ ok: false, error: "Photo upload failed. Try again." })
+          return
+        }
+        fd.set("photo_path", begin.path)
+        setProgress("Verifying & saving…")
+      }
+      const result = await upsertPersonAction({ ok: false }, fd)
+      setState(result)
+      if (result.ok) {
+        if (photoRef.current) photoRef.current.value = ""
+        setEditing(null)
+      }
+    } catch {
+      setState({ ok: false, error: "Something went wrong. Try again." })
+    } finally {
+      setBusy(false)
+      setProgress(null)
+    }
+  }
 
   return (
     <section className="space-y-4">
@@ -135,11 +183,12 @@ function PersonSection({
               </Button>
             ) : null}
           </div>
-          <form key={editing?.id ?? `new-${kind}`} action={formAction} className="space-y-4">
+          <form key={editing?.id ?? `new-${kind}`} ref={formRef} onSubmit={onSubmit} className="space-y-4">
             <input type="hidden" name="kind" value={kind} />
             {editing ? <input type="hidden" name="id" value={editing.id} /> : null}
             {state.error ? <Alert tone="error">{state.error}</Alert> : null}
             {state.ok && state.message ? <Alert tone="success">{state.message}</Alert> : null}
+            {progress ? <Alert tone="info">{progress}</Alert> : null}
             <div>
               <Label htmlFor={`${kind}-photo`}>Photo (shown as a circular pfp — optional)</Label>
               <div className="flex items-center gap-3">
@@ -156,9 +205,10 @@ function PersonSection({
                 )}
                 <input
                   id={`${kind}-photo`}
+                  ref={photoRef}
                   type="file"
-                  name="photo"
                   accept="image/*"
+                  disabled={busy}
                   className={fileInputClass}
                 />
               </div>
@@ -210,7 +260,13 @@ function PersonSection({
                 Visible on site
               </label>
             </div>
-            <SubmitButton pendingText="Saving…">{editing ? "Save changes" : addLabel}</SubmitButton>
+            <button
+              type="submit"
+              disabled={busy}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-medium text-white transition-all duration-300 hover:bg-accent-hover hover:scale-[1.02] disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {busy ? "Working…" : editing ? "Save changes" : addLabel}
+            </button>
           </form>
         </Card>
       </div>
