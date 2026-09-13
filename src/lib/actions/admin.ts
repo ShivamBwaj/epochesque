@@ -192,7 +192,9 @@ export async function updateTeamLeaderEmailAction(_prev: ActionResult, formData:
   if (authErr) return { ok: false, error: authErr.message }
 
   const members = Array.isArray(team.members) ? (team.members as unknown as TeamMember[]) : []
-  const fixedMembers = members.map((m) => (m.email === team.leader_email ? { ...m, email: newEmail } : m))
+  const fixedMembers = members.some((m) => m.email === newEmail)
+    ? members
+    : members.map((m) => (m.email === team.leader_email ? { ...m, email: newEmail } : m))
 
   const { error: dbErr } = await admin
     .from("teams")
