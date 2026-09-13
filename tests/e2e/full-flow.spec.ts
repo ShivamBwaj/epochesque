@@ -23,7 +23,7 @@ async function login(page: Page, email: string, password: string) {
 
 test("public pages render", async ({ page }) => {
   await page.goto("/")
-  await expect(page.locator("body")).toContainText("Epoch")
+  await expect(page.locator("body")).toContainText("Epochesque")
   await expect(page.locator("body")).toContainText("How it works")
   await expect(page.locator("body")).toContainText("You don't choose")
 

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Leaderboard",
-  description: "Live rankings for Epoch — Round 1 and final round scores, plus the winners' podium.",
+  description: "Live rankings for Epochesque — Round 1 and final round scores, plus the winners' podium.",
 }
 
 const MEDALS: Record<number, { icon: string; label: string; border: string; tint: string }> = {
@@ -153,7 +153,7 @@ export default async function LeaderboardPage() {
           <SectionHeading
             kicker="PODIUM"
             title={winnersTitle}
-            description="The final standings are in. That's a wrap on Epoch."
+            description="The final standings are in. That's a wrap on Epochesque."
           />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {winners.map((w) => (

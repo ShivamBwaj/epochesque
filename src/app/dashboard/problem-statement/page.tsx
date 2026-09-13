@@ -33,7 +33,7 @@ export default async function ProblemStatementPage() {
         <SectionHeading
           kicker="YOUR MISSION"
           title="Problem Statement"
-          description="The dice have spoken. This is what your team builds for Epoch."
+          description="The dice have spoken. This is what your team builds for Epochesque."
         />
         {ps ? (
           <Card className="ring-glow p-6 md:p-8">

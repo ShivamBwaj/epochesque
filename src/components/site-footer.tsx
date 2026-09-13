@@ -12,7 +12,7 @@ export function SiteFooter() {
             <circle cx="16" cy="16" r="2.2" fill="#c2703e" />
           </svg>
           <span className="text-sm font-semibold tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>
-            Epoch
+            Epochesque
           </span>
         </div>
         <nav className="flex flex-wrap justify-center gap-5 text-xs text-muted-foreground">

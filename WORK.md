@@ -1,26 +1,29 @@
-# EPOCH — Build Progress & Remaining Work
+# EPOCHESQUE — Build Progress & Remaining Work
 
 Source of truth for ongoing work. Update this file as things get done or new issues appear.
 
-## Status: ✅ v3 COMPLETE — event-day controls, upload fix, manual teams, leader email edit
+## Status: ✅ v4 COMPLETE — upload fault fixed for good, leader dropdown, tables fit, People tab, rename
 
-## v3 changes (user feedback round)
-- [x] **FIX: SYSTEM FAULT on PPT upload** — root cause: Next.js Server Action default body limit of 1 MB. Raised to 30 MB in next.config.ts (`experimental.serverActions.bodySizeLimit`). Dev server restart required (done).
-- [x] **Event-day toggles**: `roll_open` + `final_open` flags (migration 0006, default CLOSED). Big switch cards on `/admin` Overview; Final page also has the final toggle. Roll: teams see "waiting for organizers" until flipped (or auto-opens at scheduled ps_release_at if set). Final submissions: open for ALL teams when flipped — advance/eliminate concept removed entirely.
-- [x] **Removed all Advance/Eliminate/Revert buttons** from `/admin/round1` and `/admin/final`; removed status dropdown from `/admin/teams` (status is display-only now). Round 1 page links straight to Scoring.
-- [x] **Edit leader email** (✎ on `/admin/teams`): updates the auth account email + team row + members array; rejects clashes; password unchanged — for on-the-spot leader changes.
-- [x] **Manual team add** (`/admin/teams/add`): walk-in registrations — team name/code, leader details, optional extra members; generates + shows password once.
-- [x] Round1/final submission server actions no longer check team status (round1: deadline only; final: final_open flag + deadline).
-- [x] Dashboard overview/problem-statement/final pages updated for the new gates.
-- [x] e2e seed now hermetic: force-unpublishes leaderboards + opens both toggles during the run, resets after.
-- [x] Cleaned user's manual test artifacts from live DB: 3 junk round1 scores (5/4/9) deleted; leaderboard unpublished. (22 real imported teams untouched.)
-- [x] Tests re-run: 9/9 e2e green, typecheck/lint clean.
+## v4 changes (user feedback round)
+- [x] **FIX: SYSTEM FAULT on PPT uploads >10MB** (ref 3346774915) — root cause: Next.js 16 `proxy.ts` buffers request bodies with a **10MB default cap** (`experimental.proxyClientMaxBodySize`); bodies past that got truncated → "Unexpected end of form" → error boundary. v3 only raised the Server Action limit (30MB), not the proxy buffer. Now `proxyClientMaxBodySize: "35mb"` in next.config.ts. **Verified live: a 12MB PPTX uploads successfully.** Dev server restart required (done).
+- [x] **Leader change is now a dropdown** on `/admin/teams`: pick any member (by name — email) from the team's member list instead of typing an email manually. "Set" submits; auth account email + team row + members array update together; password unchanged.
+- [x] **Teams table fits the screen** — dropped the CREATED column (member count folded under team name), compact actions, no min-width. No more scrolling right to reach Delete.
+- [x] **All admin tables de-scrolled**: round1, final, audit, scoring grid, PS manager — min-widths removed, long names/emails/URLs truncate with title tooltips.
+- [x] **Renamed the event Epoch → Epochesque** everywhere user-facing: titles/metadata, nav + footer brand, OG image, admin console, e2e assertion, docs.
+- [x] **NEW: People tab** (`/admin/people`, migration 0007) — manage **Speakers** and **OC members** from the admin console: name, role, tagline, tags (speakers), order, visible/hidden. They appear instantly on the public `/speakers` and `/oc` pages (DB-driven, published-only via RLS). Both pages have proper empty states until you add people.
+- [x] **People photos** (migration 0008) — optional photo upload on the People forms (.jpg/.png/.webp, max 5MB, stored in the public `people` storage bucket). Renders as a circular Instagram-style pfp on `/speakers` + `/oc` and as a thumb in the admin table; initials-gradient fallback when no photo. Re-uploading replaces the old file; deleting a person cleans up their photo. Smoke-tested 6/6.
+- [x] Fixed broken `db:migrate:file` npm script (arg was being swallowed); `db:migrate` now really applies all migrations in order; security probe updated for the 7 event_settings keys + people table (19 checks, all pass).
+- [x] People smoke-tested through the real UI: add speaker (role/tagline/tags) + OC member → visible on public pages → delete → gone. 10/10.
+- [x] Tests re-run: 19/19 unit, 9/9 e2e, typecheck/lint/build clean, security probe 19/19.
 
 ## Timing gates — behavior summary (user question)
 - Deadlines (round1/final): **optional**. Empty = never auto-closes, submissions always allowed. Set them only if you want auto-close.
 - Roll: **closed by default** until you click "Open roll" on Overview (or set ps_release_at in Settings for scheduled auto-open).
 - Final submissions: **closed by default** until you click "Open final" (Overview or Final page).
 - Event start: only drives the landing countdown; empty shows "TBA".
+
+## v3 recap (superseded by v4 where noted)
+Event-day toggles (`roll_open`/`final_open`, migration 0006), removed advance/eliminate flow, manual team add for walk-ins, status display-only. The v3 "edit leader email (✎ free-text)" became a **member dropdown** in v4.
 
 ## v2.1 additions (previous round)
 - [x] **Real-data dry-run import** (`scripts/dry-run-import.mjs`): all 22 real teams + auth users created against live DB with ZERO errors, spot-check login verified, full cleanup — DB pristine after
@@ -69,6 +72,8 @@ Source of truth for ongoing work. Update this file as things get done or new iss
 ### Migrations
 - 0001–0004: schema, grants hygiene, advisor fixes, roll fn fix (unchanged from v1)
 - 0005: admin_audit table (RLS, service-role only) + guard_scores_locked trigger — APPLIED
+- 0006: event-day toggles (roll_open/final_open) — APPLIED
+- 0007: people table (speakers + OC, published-only public read) — APPLIED
 
 ## v1 recap (unchanged, still in place)
 Auth (rate-limited login, team/admin roles), CSV team import wizard (Team Id grouping, leader select, credentials CSV), click-to-roll PS with atomic lock, round1 PPT + final GitHub submissions with deadline gates, scoring grid + publish toggles, winners podium, gallery, settings gates, RLS lockdown everywhere (verified by 16-probe security script), publish-gated leaderboard views.
@@ -76,7 +81,7 @@ Auth (rate-limited login, team/admin roles), CSV team import wizard (Team Id gro
 ## Next steps for the user (unchanged)
 - [ ] Deploy to Vercel: env vars NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (+ optional NEXT_PUBLIC_SITE_URL for sitemap)
 - [ ] Enable "Leaked password protection" in Supabase Auth settings (dashboard toggle)
-- [ ] Replace placeholder speakers/OC data (`src/app/speakers/page.tsx`, `src/app/oc/page.tsx`)
+- [ ] Add real speakers + OC members with roles and taglines at `/admin/people` (shows on `/speakers` + `/oc`)
 - [ ] Set event dates in `/admin/settings`, import teams, add problem statements
 - [ ] Post-event: upload gallery, announce winners
 - [ ] `git remote add origin … && git push` when ready (repo is committed locally)

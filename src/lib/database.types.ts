@@ -42,6 +42,12 @@ export type Database = {
         Update: { caption?: string; created_at?: string; id?: string; sort_order?: number; storage_path?: string }
         Relationships: []
       }
+      people: {
+        Row: { created_at: string; id: string; is_published: boolean; kind: string; name: string; photo_path: string | null; role: string; sort_order: number; tagline: string; tags: Json; updated_at: string }
+        Insert: { created_at?: string; id?: string; is_published?: boolean; kind: string; name: string; photo_path?: string | null; role?: string; sort_order?: number; tagline?: string; tags?: Json; updated_at?: string }
+        Update: { created_at?: string; id?: string; is_published?: boolean; kind?: string; name?: string; photo_path?: string | null; role?: string; sort_order?: number; tagline?: string; tags?: Json; updated_at?: string }
+        Relationships: []
+      }
       leaderboard_visibility: {
         Row: { is_published: boolean; published_at: string | null; round: string; updated_at: string }
         Insert: { is_published?: boolean; published_at?: string | null; round: string; updated_at?: string }
@@ -103,6 +109,7 @@ export type ProblemStatement = Database["public"]["Tables"]["problem_statements"
 export type Submission = Database["public"]["Tables"]["submissions"]["Row"]
 export type Score = Database["public"]["Tables"]["scores"]["Row"]
 export type GalleryPhoto = Database["public"]["Tables"]["gallery_photos"]["Row"]
+export type Person = Database["public"]["Tables"]["people"]["Row"]
 export type LeaderboardEntry = Database["public"]["Views"]["leaderboard_round1_public"]["Row"]
 
 export interface TeamMember {

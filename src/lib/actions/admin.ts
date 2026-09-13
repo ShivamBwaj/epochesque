@@ -680,3 +680,87 @@ export async function galleryDeleteAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/gallery")
   revalidatePath("/gallery")
 }
+
+const PEOPLE_KINDS = ["oc", "speaker"] as const
+type PeopleKind = (typeof PEOPLE_KINDS)[number]
+
+export async function upsertPersonAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+
+  const id = String(formData.get("id") ?? "")
+  const kind = String(formData.get("kind") ?? "")
+  const name = String(formData.get("name") ?? "").trim().slice(0, 120)
+  const role = String(formData.get("role") ?? "").trim().slice(0, 120)
+  const tagline = String(formData.get("tagline") ?? "").trim().slice(0, 400)
+  const tags = String(formData.get("tags") ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .slice(0, 6)
+    .map((t) => t.slice(0, 40))
+  const sortOrder = Math.max(0, Math.min(9999, Number(formData.get("sort_order") ?? 0) || 0))
+  const isPublished = formData.get("is_published") === "on" || formData.get("is_published") === "true"
+
+  if (!PEOPLE_KINDS.includes(kind as PeopleKind)) return { ok: false, error: "Invalid person kind." }
+  if (!name) return { ok: false, error: "Name is required." }
+
+  const photoRaw = formData.get("photo")
+  const photoFile = photoRaw instanceof File && photoRaw.size > 0 ? photoRaw : null
+  if (photoFile) {
+    if (!/\.(jpe?g|png|webp)$/i.test(photoFile.name)) return { ok: false, error: "Photo must be a .jpg, .png or .webp image." }
+    if (photoFile.size > 5 * 1024 * 1024) return { ok: false, error: "Photo must be under 5 MB." }
+  }
+
+  const admin = createAdminClient()
+
+  let photoPath: string | null = null
+  if (photoFile) {
+    const path = `people/${Date.now()}-${sanitizeFileName(photoFile.name)}`
+    const buffer = Buffer.from(await photoFile.arrayBuffer())
+    const { error: upErr } = await admin.storage.from("people").upload(path, buffer, { contentType: photoFile.type || "image/jpeg", upsert: false })
+    if (upErr) return { ok: false, error: `Photo upload failed: ${upErr.message}` }
+    photoPath = path
+    if (id) {
+      const { data: existing } = await admin.from("people").select("photo_path").eq("id", id).maybeSingle()
+      if (existing?.photo_path) await admin.storage.from("people").remove([existing.photo_path]).catch(() => {})
+    }
+  }
+
+  const payload = {
+    kind,
+    name,
+    role,
+    tagline,
+    tags: tags as never,
+    sort_order: sortOrder,
+    is_published: isPublished,
+    ...(photoPath ? { photo_path: photoPath } : {}),
+  }
+
+  const { error } = id
+    ? await admin.from("people").update(payload).eq("id", id)
+    : await admin.from("people").insert(payload)
+
+  if (error) return { ok: false, error: error.message }
+  await audit(admin, user, id ? "person.update" : "person.create", name, { kind, published: isPublished })
+  revalidatePath("/admin/people")
+  revalidatePath("/speakers")
+  revalidatePath("/oc")
+  return { ok: true, message: id ? `${name} updated.` : `${name} added.` }
+}
+
+export async function deletePersonAction(formData: FormData): Promise<void> {
+  const user = await requireAdminAction()
+  if (!user) return
+  const id = String(formData.get("id") ?? "")
+  if (!id) return
+  const admin = createAdminClient()
+  const { data: person } = await admin.from("people").select("name, kind, photo_path").eq("id", id).maybeSingle()
+  await admin.from("people").delete().eq("id", id)
+  if (person?.photo_path) await admin.storage.from("people").remove([person.photo_path]).catch(() => {})
+  await audit(admin, user, "person.delete", person?.name ?? id, { kind: person?.kind })
+  revalidatePath("/admin/people")
+  revalidatePath("/speakers")
+  revalidatePath("/oc")
+}

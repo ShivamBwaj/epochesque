@@ -38,7 +38,7 @@ export default async function DashboardOverviewPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Team Code" value={team.team_code} sub="Your identity across Epoch" />
+        <StatCard label="Team Code" value={team.team_code} sub="Your identity across Epochesque" />
         <StatCard label="Status" value={team.status.toUpperCase()} sub="Current stage" />
         <StatCard label="Members" value={String(members.length)} sub="Registered squad size" />
       </div>

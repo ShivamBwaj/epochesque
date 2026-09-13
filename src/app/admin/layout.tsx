@@ -18,7 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div>
           <p className="hud-label">ORGANIZER CONSOLE</p>
           <h1 className="mt-1 flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            <span className="text-gradient">Epoch Control Room</span>
+            <span className="text-gradient">Epochesque Control Room</span>
             <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 font-mono text-[11px] tracking-[0.25em] text-violet-300">
               ADMIN
             </span>

@@ -137,7 +137,7 @@ option:checked {
   color: inherit;
 }
 
-/* ── Epoch legacy helpers (kept for dashboard/admin pages) ── */
+/* ── Epochesque legacy helpers (kept for dashboard/admin pages) ── */
 .hud-label {
   font-family: var(--font-mono);
   font-size: 0.65rem;

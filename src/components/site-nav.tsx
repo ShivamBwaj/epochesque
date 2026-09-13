@@ -47,7 +47,7 @@ export function SiteNav({
             className="text-sm font-semibold tracking-tight text-foreground"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Epoch
+            Epochesque
           </span>
         </Link>
 

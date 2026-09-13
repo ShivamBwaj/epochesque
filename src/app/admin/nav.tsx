@@ -8,6 +8,7 @@ const links = [
   { href: "/admin/teams", label: "Teams" },
   { href: "/admin/teams/import", label: "Import" },
   { href: "/admin/problem-statements", label: "Problems" },
+  { href: "/admin/people", label: "People" },
   { href: "/admin/round1", label: "Round 1" },
   { href: "/admin/final", label: "Final" },
   { href: "/admin/scoring", label: "Scoring" },

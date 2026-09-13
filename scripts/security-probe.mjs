@@ -106,8 +106,25 @@ async function main() {
 
   await check("read event_settings (public by design)", async () => {
     const { data, error } = await anon.from("event_settings").select("key")
-    const expected = !error && data.length === 5
-    return { denied: expected, detail: expected ? "OK — intentionally public timing info only" : `UNEXPECTED: ${error?.message ?? data.length + " keys"}` }
+    const allowed = ["event_start", "ps_release_at", "round1_deadline", "final_deadline", "event_end", "roll_open", "final_open"]
+    const expected = !error && data.length === allowed.length && data.every((r) => allowed.includes(r.key))
+    return { denied: expected, detail: expected ? "OK — intentionally public timing info + gate flags only" : `UNEXPECTED: ${error?.message ?? data.length + " keys"}` }
+  })
+
+  await check("insert into people (speakers/OC)", async () => {
+    const { error } = await anon.from("people").insert({ kind: "speaker", name: "HACK" })
+    return { denied: !!error, detail: error ? error.message : "INSERT WENT THROUGH" }
+  })
+
+  await check("delete from people (speakers/OC)", async () => {
+    const { error } = await anon.from("people").delete().neq("name", "")
+    return { denied: !!error, detail: error ? error.message : "DELETE WENT THROUGH" }
+  })
+
+  await check("read people table (published only, by design)", async () => {
+    const { data, error } = await anon.from("people").select("kind, name, is_published")
+    const hiddenLeak = (data ?? []).some((r) => r.is_published === false)
+    return { denied: !error && !hiddenLeak, detail: error ? error.message : hiddenLeak ? "UNPUBLISHED ROWS VISIBLE" : `${data.length} published rows visible` }
   })
 
   await check("leaderboard views while unpublished (0 rows = gated)", async () => {

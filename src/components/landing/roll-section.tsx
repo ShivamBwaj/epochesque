@@ -60,7 +60,7 @@ export function RollSection() {
             </span>
           </h2>
           <p className="text-muted-foreground text-sm mb-12 max-w-lg">
-            Every hackathon starts the same way: hours lost arguing over which problem to pick. Epoch deletes the argument.
+            Every hackathon starts the same way: hours lost arguing over which problem to pick. Epochesque deletes the argument.
           </p>
         </Reveal>
 

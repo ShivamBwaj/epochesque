@@ -8,7 +8,7 @@ const stats = [
   { value: 100, label: "Teams in the arena", type: "number" as const },
   { value: "48", label: "Hours on the clock", type: "static" as const },
   { value: "1", label: "Roll — locked forever", type: "static" as const },
-  { value: "₹", label: "Prize pool + goodies", type: "static" as const },
+  { value: "🏆", label: "Exclusive prizes + goodies", type: "static" as const },
 ]
 
 export function StatsBar() {
@@ -33,10 +33,8 @@ export function StatsBar() {
                 className="text-center"
               >
                 <div className="text-[clamp(28px,4vw,40px)] font-semibold text-foreground leading-none mb-2">
-                  {stat.type === "number" && inView ? (
+                  {stat.type === "number" ? (
                     <AnimatedNumber value={stat.value as number} duration={1400} />
-                  ) : stat.type === "number" ? (
-                    <span>0</span>
                   ) : (
                     <motion.span
                       initial={{ opacity: 0 }}

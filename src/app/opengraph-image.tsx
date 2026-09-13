@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og"
 
 export const runtime = "edge"
-export const alt = "Epoch — Roll. Build. Ship."
+export const alt = "Epochesque — Roll. Build. Ship."
 export const size = { width: 1200, height: 630 }
 
 export default function OpengraphImage() {
@@ -37,7 +37,7 @@ export default function OpengraphImage() {
             🎲
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontSize: 110, fontWeight: 700, color: "#fafaf9", letterSpacing: "-0.02em", lineHeight: 1 }}>EPOCH</div>
+            <div style={{ fontSize: 92, fontWeight: 700, color: "#fafaf9", letterSpacing: "-0.02em", lineHeight: 1 }}>EPOCHESQUE</div>
             <div style={{ fontSize: 34, color: "#c2703e", fontStyle: "italic", marginTop: 8 }}>roll. build. ship.</div>
           </div>
         </div>

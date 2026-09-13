@@ -29,6 +29,7 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "30mb",
     },
+    proxyClientMaxBodySize: "35mb",
   },
   async headers() {
     if (process.env.NODE_ENV !== "production") return [];

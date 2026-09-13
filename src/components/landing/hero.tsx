@@ -49,8 +49,8 @@ export function Hero({ eventStart }: { eventStart: string | null }) {
               transition={{ duration: 0.5, delay: 0.25 }}
               className="text-muted-foreground text-[15px] md:text-base leading-relaxed mb-6 max-w-lg"
             >
-              Two days. One locked-in problem statement decided by the dice. 48 hours to{" "}
-              <RotatingWords /> your way onto a leaderboard that remembers everything.
+              One roll. One problem. Two days to <RotatingWords /> — and a
+              leaderboard that remembers everything.
             </motion.p>
 
             <motion.div

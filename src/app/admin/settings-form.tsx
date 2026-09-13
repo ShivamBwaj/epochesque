@@ -19,7 +19,7 @@ export function SettingsForm({ timing }: { timing: EventTiming }) {
     { name: "ps_release_at", label: "Problem statements release", help: "Gates the roll button on team dashboards." },
     { name: "round1_deadline", label: "Round 1 deadline", help: "Gates Round 1 deck submissions." },
     { name: "final_deadline", label: "Final round deadline", help: "Gates final round repo submissions." },
-    { name: "event_end", label: "Event end", help: "Informational — the closing time of Epoch." },
+    { name: "event_end", label: "Event end", help: "Informational — the closing time of Epochesque." },
   ]
 
   return (

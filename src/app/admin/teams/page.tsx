@@ -11,10 +11,6 @@ export const metadata: Metadata = {
   title: "Teams",
 }
 
-function fmt(iso: string | null) {
-  return iso ? new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"
-}
-
 export default async function AdminTeamsPage() {
   await requireAdminPage()
   const admin = createAdminClient()
@@ -30,7 +26,7 @@ export default async function AdminTeamsPage() {
       <SectionHeading
         kicker="REGISTRY"
         title="Teams"
-        description="Every squad at Epoch. Change the leader's email on the spot (✎), reset passwords, or add walk-in teams manually."
+        description="Every squad at Epochesque. Pick a different leader from the member dropdown, reset passwords, or add walk-in teams manually."
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -53,17 +49,15 @@ export default async function AdminTeamsPage() {
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[64rem] text-left text-sm">
+            <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-white/[0.08]">
-                  <th className="hud-label px-4 py-3">CODE</th>
-                  <th className="hud-label px-4 py-3">TEAM</th>
-                  <th className="hud-label px-4 py-3">LEADER (✎ = EDIT EMAIL)</th>
-                  <th className="hud-label px-4 py-3">MEMBERS</th>
-                  <th className="hud-label px-4 py-3">PS</th>
-                  <th className="hud-label px-4 py-3">STATUS</th>
-                  <th className="hud-label px-4 py-3">CREATED</th>
-                  <th className="hud-label px-4 py-3">ACTIONS</th>
+                  <th className="hud-label whitespace-nowrap px-3 py-3">CODE</th>
+                  <th className="hud-label px-3 py-3">TEAM</th>
+                  <th className="hud-label px-3 py-3">LEADER (PICK FROM MEMBERS)</th>
+                  <th className="hud-label hidden whitespace-nowrap px-3 py-3 md:table-cell">PS</th>
+                  <th className="hud-label hidden px-3 py-3 md:table-cell">STATUS</th>
+                  <th className="hud-label px-3 py-3">ACTIONS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.05]">
@@ -72,7 +66,6 @@ export default async function AdminTeamsPage() {
                     key={team.id}
                     team={team}
                     psCode={team.problem_statement_id ? psMap.get(team.problem_statement_id) ?? "—" : "—"}
-                    createdAt={fmt(team.created_at)}
                   />
                 ))}
               </tbody>
@@ -80,6 +73,15 @@ export default async function AdminTeamsPage() {
           </div>
         </Card>
       )}
+
+      {rows.length > 0 ? (
+        <p className="text-xs text-muted/70">
+          Need a leaderboard link or a deck?{" "}
+          <Link href="/admin/round1" className="text-accent-hover hover:underline">
+            Round 1 →
+          </Link>
+        </p>
+      ) : null}
     </div>
   )
 }

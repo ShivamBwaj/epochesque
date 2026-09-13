@@ -183,7 +183,7 @@ export function ScoringGrid({
           <input type="hidden" name="round" value={round} />
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[44rem] text-left text-sm">
+              <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-white/[0.08]">
                     <th className="hud-label px-4 py-3">CODE</th>
@@ -198,7 +198,9 @@ export function ScoringGrid({
                     return (
                       <tr key={t.id} className="transition hover:bg-white/[0.02]">
                         <td className="px-4 py-2.5 font-mono text-xs tracking-wide text-accent-hover">{t.team_code}</td>
-                        <td className="px-4 py-2.5 font-medium text-foreground">{t.team_name}</td>
+                        <td className="px-4 py-2.5 font-medium text-foreground">
+                          <span className="block max-w-48 truncate" title={t.team_name}>{t.team_name}</span>
+                        </td>
                         <td className="px-4 py-2.5">
                           <Input
                             type="number"

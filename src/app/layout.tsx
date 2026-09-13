@@ -18,13 +18,13 @@ const instrumentSerif = Instrument_Serif({
 
 export const metadata: Metadata = {
   title: {
-    default: "Epoch — Roll. Build. Ship.",
-    template: "%s — Epoch",
+    default: "Epochesque — Roll. Build. Ship.",
+    template: "%s — Epochesque",
   },
   description:
-    "Epoch — a 48-hour hackathon where you don't choose your problem, you roll it. One locked-in problem statement, two days, one leaderboard that remembers everything.",
+    "Epochesque — a 48-hour hackathon where you don't choose your problem, you roll it. One locked-in problem statement, two days, one leaderboard that remembers everything.",
   openGraph: {
-    title: "Epoch — Roll. Build. Ship.",
+    title: "Epochesque — Roll. Build. Ship.",
     description: "A 48-hour hackathon. One roll of the dice decides your problem statement.",
     type: "website",
   },

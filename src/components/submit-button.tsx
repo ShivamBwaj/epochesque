@@ -10,6 +10,8 @@ export function SubmitButton({
   size = "md",
   className = "",
   confirm,
+  disabled,
+  title,
 }: {
   children: React.ReactNode
   pendingText?: string
@@ -17,12 +19,15 @@ export function SubmitButton({
   size?: "sm" | "md" | "lg"
   className?: string
   confirm?: string
+  disabled?: boolean
+  title?: string
 }) {
   const { pending } = useFormStatus()
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
+      title={title}
       className={buttonClass(variant, size) + " " + className}
       onClick={(e) => {
         if (confirm && !window.confirm(confirm)) e.preventDefault()

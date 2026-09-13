@@ -23,7 +23,7 @@
     "test:e2e": "playwright test",
     "security:probe": "node scripts/security-probe.mjs",
     "db:migrate": "node scripts/apply-migration.mjs",
-    "db:migrate:file": "node scripts/apply-migration.mjs supabase/migrations/FILE.sql",
+    "db:migrate:file": "node scripts/apply-migration.mjs",
     "seed:admin": "node scripts/seed-admin.mjs"
   },
   "dependencies": {

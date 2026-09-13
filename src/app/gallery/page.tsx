@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Gallery",
-  description: "Photos from the Epoch floor — the build, the breakdowns, the 3 a.m. victories.",
+  description: "Photos from the Epochesque floor — the build, the breakdowns, the 3 a.m. victories.",
 }
 
 export default async function GalleryPage() {
@@ -19,7 +19,7 @@ export default async function GalleryPage() {
       <SectionHeading
         kicker="ARCHIVE"
         title="Gallery"
-        description="The caffeine, the whiteboards, the 3 a.m. demo that somehow worked — straight from the Epoch floor."
+        description="The caffeine, the whiteboards, the 3 a.m. demo that somehow worked — straight from the Epochesque floor."
       />
       {photos.length === 0 ? (
         <EmptyState
@@ -36,7 +36,7 @@ export default async function GalleryPage() {
             >
               <img
                 src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/gallery/${p.storage_path}`}
-                alt={p.caption || "Photo from Epoch"}
+                alt={p.caption || "Photo from Epochesque"}
                 loading="lazy"
                 decoding="async"
                 className="w-full transition-transform duration-500 group-hover:scale-105"

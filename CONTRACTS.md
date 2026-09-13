@@ -1,13 +1,13 @@
 # EPOCH — Page Builder Contracts
 
-Read this fully before writing any file. You are building pages for the Epoch hackathon website (Next.js 16 App Router + Supabase + Tailwind v4). Work ONLY inside `src/app/<your-scope>/` and the client component files explicitly assigned to you. Do NOT modify shared files (layout, lib, components/ui.tsx, etc). Do NOT add dependencies. Do NOT add code comments.
+Read this fully before writing any file. You are building pages for the Epochesque hackathon website (Next.js 16 App Router + Supabase + Tailwind v4). Work ONLY inside `src/app/<your-scope>/` and the client component files explicitly assigned to you. Do NOT modify shared files (layout, lib, components/ui.tsx, etc). Do NOT add dependencies. Do NOT add code comments.
 
 ## Global rules
 
 - TypeScript strict. Server Components by default; add `"use client"` only when the file needs hooks/handlers.
 - NO comments in code.
 - All data pages that read cookies/DB must export `const dynamic = "force-dynamic"`.
-- Every page: `export const metadata` with a title (template adds "— Epoch").
+- Every page: `export const metadata` with a title (template adds "— Epochesque").
 - Dark theme only. Use Tailwind classes + the shared components. Key vibes: near-black `#05060f` bg, cyan/indigo accents, mono HUD labels (`hud-label` class), `card`, `card-hover`, `text-gradient`, `ring-glow` classes available in globals.css.
 - Import shared UI from `@/components/ui`: `Button, LinkButton, Card, Badge, StatusBadge, Label, Input, Select, Textarea, Alert, SectionHeading, EmptyState, StatCard, Prose, buttonClass`.
 - Client form components: `@/components/submit-button` → `SubmitButton` (uses useFormStatus; props: children, pendingText, variant, size, className, confirm).
@@ -62,5 +62,5 @@ Read this fully before writing any file. You are building pages for the Epoch ha
 - After writing all your files run `npx tsc --noEmit` from the repo root and fix every error in YOUR files. If an error points at a shared file, report it instead of editing it.
 - Mobile-responsive: use responsive Tailwind classes.
 - Empty states everywhere data can be absent.
-- No lorem ipsum: write real, short, punchy copy for a hackathon called "Epoch" run by a college tech club. Placeholder people (speakers/OC) use realistic-but-generic names with "TBA" bios where sensible.
+- No lorem ipsum: write real, short, punchy copy for a hackathon called "Epochesque" run by a college tech club. Speakers/OC come from the `people` table (admin-managed) — pages must handle the empty state gracefully.
 - Verify: `npx tsc --noEmit` passes.

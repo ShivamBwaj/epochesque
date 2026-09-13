@@ -1,6 +1,6 @@
-# EPOCH — The Complete Guide
+# EPOCHESQUE — The Complete Guide
 
-The website for **Epoch**, a 48-hour hackathon where teams don't pick their problem — they **roll** it like dice, get locked in instantly, build through two rounds, and climb a publicly published leaderboard.
+The website for **Epochesque**, a 48-hour hackathon where teams don't pick their problem — they **roll** it like dice, get locked in instantly, build through two rounds, and climb a publicly published leaderboard.
 
 Dark, glassy, aurora-animated UI · roll-the-dice mechanic · zero setup for participants.
 
@@ -44,8 +44,8 @@ Supabase (the database + more)
 | Page | What it is |
 |---|---|
 | `/` | Landing — aurora hero, live countdown, "How it works" timeline, the Roll explainer, animated demo feed of dice rolls |
-| `/speakers` | Speaker lineup (placeholder people until you edit the file) |
-| `/oc` | Organizing committee (placeholder people until you edit the file) |
+| `/speakers` | Speaker lineup — managed from the admin **People** tab (empty state until you add them) |
+| `/oc` | Organizing committee — managed from the admin **People** tab (roles + taglines) |
 | `/leaderboard` | Rankings. Shows 🔒 "Revealed after judging" until an admin publishes. Winners banner appears when published. |
 | `/gallery` | Photo grid — empty ("Photos drop after the event") until admin uploads |
 | `/login` | Single login page for **everyone** — admin and teams. The site routes you based on who you are. |
@@ -62,9 +62,10 @@ Supabase (the database + more)
 | Page | What it does |
 |---|---|
 | `/admin` | Overview — live counts (teams/status/rolls/submissions), event gate states, recent admin actions |
-| `/admin/teams` | Every team: code, members, login email, PS, status. Change status, reset password (shows once, copy it), delete team |
+| `/admin/teams` | Every team: code, members, login email, PS, status. Change the leader from the member dropdown, reset password (shows once, copy it), delete team |
 | `/admin/teams/import` | **CSV import wizard** (details below) |
 | `/admin/problem-statements` | Add/edit the problem pool. Each PS has a `max_teams` capacity — how many teams the dice can assign it |
+| `/admin/people` | Speakers + OC members: name, role, tagline, tags, order, visible/hidden — publishes straight to `/speakers` and `/oc` |
 | `/admin/round1` | All Round 1 decks — download via expiring links, Advance/Eliminate/Revert teams |
 | `/admin/final` | Shortlisted teams' GitHub links, mark finalists/winners |
 | `/admin/scoring` | The judging sheet — type scores in the grid **or** import the judges' Google-Form CSV. Publish/Unpublish toggle per round |
@@ -94,7 +95,8 @@ Supabase (the database + more)
 ### Before the event (T-minus days)
 1. **Set the clocks (optional)** — `/admin/settings`: event start (landing countdown), Round 1 deadline, Final deadline. **If you leave a deadline empty, that round simply never auto-closes** — everything stays usable.
 2. **Load the problem pool** — `/admin/problem-statements`. Set `max_teams` per PS (e.g. 20 PSs × 5 teams each = 100 capacity). Total capacity must be ≥ team count.
-3. **Import teams** — `/admin/teams/import`:
+3. **Add the humans** — `/admin/people`: speakers (role, tagline, tags) and OC members (role, tagline). They appear on the public site immediately. Hidden rows stay draft-only.
+4. **Import teams** — `/admin/teams/import`:
    - Export the registration Excel as **CSV UTF-8** (File → Save As → CSV).
    - Columns: `Id, Name, Email, Ph_No, College, Payment Status, College Type, Team Id` (case-insensitive, extra columns fine).
    - Rows with the **same Team Id become one team**. Junk rows (no team id/name) are auto-skipped and listed.
@@ -106,7 +108,7 @@ Supabase (the database + more)
 ### Day 1 — the two big switches
 5. **Open the roll** — on `/admin` (Overview) flip **🎲 Open roll** when you want teams to be able to roll. Until you flip it, teams see a "waiting for the organizers" screen — the dice do NOT work. (You can also set a scheduled release time in Settings, which auto-opens it.)
 6. Teams roll and build. Watch `/admin` for live roll/submission counts.
-7. **Change leader on the spot** — on `/admin/teams` click ✎ next to a leader's email, type the real leader's email (they told you in person), save. Their password stays the same — hand it to them.
+7. **Change leader on the spot** — on `/admin/teams` open the leader dropdown, pick the member who should own the login, hit **Set**. Their password stays the same — hand it to them.
 8. Send **notices** (`/admin/notices`) for anything urgent — they appear on every team dashboard instantly.
 9. As decks come in, review them at `/admin/round1` (download links are signed, expire in 5 min).
 
@@ -120,9 +122,9 @@ Supabase (the database + more)
 14. Judges score again → `/admin/scoring?round=final` → Publish.
 
 ### Closing + post-event
-14. `/admin/announce-winners` — build the podium, Save & Publish.
-15. `/admin/gallery` — upload photos.
-16. If anything needs investigating later — `/admin/audit` has every action ever taken, with timestamps.
+15. `/admin/announce-winners` — build the podium, Save & Publish.
+16. `/admin/gallery` — upload photos.
+17. If anything needs investigating later — `/admin/audit` has every action ever taken, with timestamps.
 
 ---
 
@@ -132,7 +134,7 @@ Supabase (the database + more)
 - **Zero API grants** on scores, announcements, leaderboard visibility, admins, audit log — these tables are invisible to the outside; only server-side admin actions touch them.
 - **Score lock trigger** — Postgres itself refuses score edits while that round's leaderboard is published. You must unpublish first (visible action) before correcting.
 - **The roll is atomic** (`SELECT … FOR UPDATE SKIP LOCKED`) — two teams clicking simultaneously can never claim the same slot. No re-rolls: the function is idempotent and returns your existing PS.
-- **Upload checks**: extension + size + **magic bytes** (a `.exe` renamed `.pptx` is rejected — file content is inspected).
+- **Upload checks**: extension + size + **magic bytes** (a `.exe` renamed `.pptx` is rejected — file content is inspected). The proxy body buffer is raised to 35MB so real decks (up to 25MB) upload without the old SYSTEM FAULT.
 - **Private submissions bucket** — decks are only reachable via expiring signed URLs generated for the admin.
 - **Login rate-limited** per IP and per email.
 - **Security headers** (CSP, HSTS, X-Frame-Options DENY, nosniff) in production.
@@ -146,7 +148,7 @@ Supabase (the database + more)
 |---|---|
 | `npm run test` | 19 unit tests — CSV parser, score parser, magic-byte checks, **your real 33-row registration file** |
 | `npm run test:e2e` | 9 Playwright journeys against the real Supabase: public pages, auth redirects, full team journey (login→roll→lock→upload), team blocked from admin, full admin journey (score→publish→live leaderboard→winners→unpublish), CSV score import, notices broadcast + audit trail, fake-file rejection |
-| `npm run security:probe` | 16 anon-key attack probes (all tables, RPC, storage) |
+| `npm run security:probe` | 19 anon-key attack probes (all tables, RPC, storage, people) |
 | `npm run typecheck && npm run lint` | Static checks |
 | `node scripts/dry-run-import.mjs` | Imports your real registration file into the live DB, verifies, cleans up (run before event day for peace of mind) |
 

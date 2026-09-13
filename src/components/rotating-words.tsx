@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 
-const WORDS = ["prototype", "pitch", "debug", "ship", "win"]
+const WORDS = ["prototype it", "build it", "break it", "fix it", "ship it"]
 
 export function RotatingWords() {
   const words = useMemo(() => WORDS, [])

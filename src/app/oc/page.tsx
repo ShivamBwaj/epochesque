@@ -1,23 +1,14 @@
 import type { Metadata } from "next"
-import { Card, SectionHeading } from "@/components/ui"
+import { createClient } from "@/lib/supabase/server"
+import { Card, EmptyState, SectionHeading } from "@/components/ui"
+import type { Person } from "@/lib/database.types"
+
+export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Organizing Committee",
-  description: "The humans behind Epoch — convener, tech, design, ops and everything in between.",
+  description: "The humans behind Epochesque — convener, tech, design, ops and everything in between.",
 }
-
-const COMMITTEE: { name: string; role: string }[] = [
-  { name: "Aarav Menon", role: "Convener" },
-  { name: "Diya Krishnan", role: "Co-Convener" },
-  { name: "Vishnu Rajan", role: "Tech Lead" },
-  { name: "Ishita Bose", role: "Design Lead" },
-  { name: "Karan Pillai", role: "Operations" },
-  { name: "Meera Joshi", role: "PR & Outreach" },
-  { name: "Siddharth Rao", role: "Sponsorships & Finance" },
-  { name: "Tanvi Deshmukh", role: "Events & Logistics" },
-  { name: "Nikhil Suresh", role: "Media & Content" },
-  { name: "Zoya Khan", role: "Registrations" },
-]
 
 const HUES = [
   "from-indigo-500 to-cyan-400",
@@ -41,31 +32,62 @@ function initials(name: string) {
     .toUpperCase()
 }
 
-export default function OcPage() {
+export default async function OcPage() {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("people")
+    .select("*")
+    .eq("kind", "oc")
+    .eq("is_published", true)
+    .order("sort_order")
+    .order("name")
+  const committee = (data ?? []) as Person[]
+
   return (
     <div className="mx-auto max-w-6xl px-4 pt-28 py-12">
       <SectionHeading
         kicker="THE CREW"
         title="Organizing Committee"
-        description="Ten sleep-deprived humans who made this happen. Find any of them on the floor if something breaks."
+        description="The sleep-deprived humans who made this happen. Find any of them on the floor if something breaks."
       />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {COMMITTEE.map((m, i) => (
-          <Card key={m.name} className="card-hover flex items-center gap-4 p-5">
-            <span
-              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${
-                HUES[i % HUES.length]
-              } font-mono text-base font-black text-slate-950`}
-            >
-              {initials(m.name)}
-            </span>
-            <div className="min-w-0">
-              <h3 className="truncate text-sm font-semibold text-slate-100">{m.name}</h3>
-              <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-cyan-300/70">{m.role}</p>
-            </div>
-          </Card>
-        ))}
-      </div>
+      {committee.length === 0 ? (
+        <EmptyState
+          icon="◈"
+          title="The crew page is being finalized"
+          description="Committee members with their roles and taglines land here soon."
+        />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {committee.map((m, i) => (
+            <Card key={m.id} className="card-hover p-5">
+              <div className="flex items-center gap-4">
+                {m.photo_path ? (
+                  <img
+                    src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/people/${m.photo_path}`}
+                    alt={m.name}
+                    className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-white/10"
+                  />
+                ) : (
+                  <span
+                    className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${
+                      HUES[i % HUES.length]
+                    } font-mono text-base font-black text-slate-950`}
+                  >
+                    {initials(m.name)}
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <h3 className="truncate text-sm font-semibold text-slate-100">{m.name}</h3>
+                  {m.role ? (
+                    <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-cyan-300/70">{m.role}</p>
+                  ) : null}
+                </div>
+              </div>
+              {m.tagline ? <p className="mt-3 text-xs leading-relaxed text-slate-400">{m.tagline}</p> : null}
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

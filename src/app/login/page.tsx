@@ -3,7 +3,7 @@ import { LoginForm } from "@/components/login-form"
 
 export const metadata: Metadata = {
   title: "Team Login",
-  description: "Sign in to your Epoch team dashboard with your leader credentials.",
+  description: "Sign in to your Epochesque team dashboard with your leader credentials.",
 }
 
 export default async function LoginPage({

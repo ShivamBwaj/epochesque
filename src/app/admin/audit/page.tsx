@@ -41,7 +41,7 @@ export default async function AdminAuditPage() {
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[52rem] text-left text-sm">
+            <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-white/[0.08]">
                   <th className="hud-label px-4 py-3">WHEN</th>

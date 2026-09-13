@@ -37,7 +37,7 @@ export default async function AdminGalleryPage() {
             const url = `${supabaseUrl}/storage/v1/object/public/gallery/${p.storage_path}`
             return (
               <Card key={p.id} className="overflow-hidden">
-                <img src={url} alt={p.caption || "Epoch event photo"} className="aspect-[4/3] w-full object-cover" loading="lazy" />
+                <img src={url} alt={p.caption || "Epochesque event photo"} className="aspect-[4/3] w-full object-cover" loading="lazy" />
                 <div className="space-y-3 p-3">
                   <p className="truncate text-xs text-slate-400" title={p.caption}>
                     {p.caption || "—"}

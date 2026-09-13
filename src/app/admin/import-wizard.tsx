@@ -83,7 +83,7 @@ export function ImportWizard() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = "epoch-team-credentials.csv"
+    a.download = "epochesque-team-credentials.csv"
     a.click()
     URL.revokeObjectURL(url)
   }

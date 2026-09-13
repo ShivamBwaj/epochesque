@@ -80,7 +80,7 @@ export default async function AdminFinalPage() {
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[48rem] text-left text-sm">
+            <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-white/[0.08]">
                   <th className="hud-label px-4 py-3">CODE</th>
@@ -96,7 +96,9 @@ export default async function AdminFinalPage() {
                   return (
                     <tr key={t.id} className="transition hover:bg-white/[0.02]">
                       <td className="px-4 py-3 font-mono text-xs tracking-wide text-accent-hover">{t.team_code}</td>
-                      <td className="px-4 py-3 font-medium text-foreground">{t.team_name}</td>
+                      <td className="px-4 py-3 font-medium text-foreground">
+                        <span className="block max-w-48 truncate" title={t.team_name}>{t.team_name}</span>
+                      </td>
                       <td className="px-4 py-3 font-mono text-xs text-muted">
                         {t.problem_statement_id ? psMap.get(t.problem_statement_id) ?? "—" : "—"}
                       </td>
@@ -115,7 +117,7 @@ export default async function AdminFinalPage() {
                           <span className="text-xs text-muted/50">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs text-muted/70">{sub ? fmt(sub.submitted_at) : "—"}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs text-muted/70">{sub ? fmt(sub.submitted_at) : "—"}</td>
                     </tr>
                   )
                 })}
