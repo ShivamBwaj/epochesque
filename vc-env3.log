@@ -1,8 +1,0 @@
-﻿Vercel CLI 59.16.0 (Node.js 24.19.0)
-Retrieving projectΓÇª
-> Environment Variables found for shivambwajs-projects/epochesque [440ms]
-
- name                               value                       type      environments        created    
- SUPABASE_SERVICE_ROLE_KEY          Hidden                      Secret    Production          42s ago    
- NEXT_PUBLIC_SUPABASE_URL           eyJ2IjoidjIiLCJjIjΓÇª         Config    Production          57s ago    
-

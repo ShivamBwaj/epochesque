@@ -52,3 +52,9 @@ tests/fixtures/real-registration.csv
 vercel-login.log
 .vercel
 .env*
+
+.prod-test-creds.json
+*.tmp.mjs
+vc-*.log
+e2e-debug.log
+vercel-login.log
