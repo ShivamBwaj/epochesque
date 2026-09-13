@@ -58,3 +58,6 @@ vercel-login.log
 vc-*.log
 e2e-debug.log
 vercel-login.log
+
+*.tmp.mjs
+score-fail.png

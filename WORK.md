@@ -13,9 +13,12 @@ Source of truth for ongoing work. Update this file as things get done or new iss
 - [x] **REAL BUG: deleting a team leaked a PS slot** — added `decrement_ps_taken()` RPC (migration 0009); deleteTeamAction calls it.
 - [x] **REAL BUG: leader switch between existing members corrupted the members array** (email rewrite created duplicates). Fixed; only rewrites when the new email isn't already a member.
 - [x] **REAL BUG: score input `step="0.5"` silently blocked quarter-point scores** (87.25 etc.) at the browser level — no error, no submit. Changed to `step="0.01"` (backend always accepted 2 decimals).
+- [x] **REAL BUG: Settings save failed whenever any of the 5 clocks was empty** — `event_settings.value` is jsonb NOT NULL but cleared fields wrote SQL NULL → constraint error on every save with a blank field. Cleared fields now store `""` (reader treats as unset).
+- [x] Login rate limits raised for event-day load: 60/15min per IP, 15/15min per email.
 - [x] e2e seeds now deactivate real PS during runs (hermetic rolls next to real data); restore on cleanup.
-- [x] Full prod verification: Phase A admin setup+import 11/11 · Phase B team journey 18/18 (incl. roll gate closed/open, PS lock, 12MB upload, final gate) · Phase C admin deep pass 18/18 (leader dropdown change+restore, pw reset, manual walk-in add+login+delete, people+photos public render, deck download) · Phase D scoring/publish/lock/CSV/winners/notices/settings/audit — all green.
-- [x] Security probe extended to 19 checks (people table + 7 event_settings keys) — all pass.
+- [x] Full prod verification: Phase A admin setup+CSV import 11/11 · Phase B team journey 18/18 (roll gate closed/open, PS lock, 12MB upload, final gate) · upload re-test 6/6 · Phase C admin deep pass 18/18 (leader dropdown change+restore, pw reset, walk-in add+login+delete, people+photos, deck download) · Phase D scoring/publish/DB-lock/CSV import/winners/notices 19/19 · settings+audit 5/5.
+- [x] Security probe: 19/19 denied (incl. new people-table + upload-bypass probes).
+- [x] **DB wiped PRISTINE for handover**: 0 teams / 0 PS / 0 submissions / 0 scores / 0 people / 0 audit, 1 admin, all gates closed, clocks cleared. Public pages verified in pristine state (locked leaderboard, empty states, no errors).
 
 ## v4 changes (user feedback round)
 - [x] **FIX: SYSTEM FAULT on PPT uploads >10MB** (ref 3346774915) — root cause: Next.js 16 `proxy.ts` buffers request bodies with a **10MB default cap** (`experimental.proxyClientMaxBodySize`); bodies past that got truncated → "Unexpected end of form" → error boundary. v3 only raised the Server Action limit (30MB), not the proxy buffer. Now `proxyClientMaxBodySize: "35mb"` in next.config.ts. **Verified live: a 12MB PPTX uploads successfully.** Dev server restart required (done).
