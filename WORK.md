@@ -2,7 +2,14 @@
 
 Source of truth for ongoing work. Update this file as things get done or new issues appear.
 
-## Status: ✅ v9 — board-style people cards + pristine handover + Netlify deploy
+## Status: ✅ v9.1 — LIVE on Netlify · full suite green · DB pristine
+
+## v9.1 — Netlify deploy (production)
+- [x] **LIVE: https://epochesque.netlify.app** — netlify-cli installed + logged in, site created (clean URL), env vars set (production + preview), `netlify deploy --prod`.
+- [x] **REAL BUG: Next 16 `proxy.ts` can't bundle on Netlify** (plugin expects the old middleware convention — "Cannot find module './chunks/[turbopack]_runtime.js'"). Fixed: renamed back to `src/middleware.ts` with `export async function middleware` — builds fine locally + on Netlify (deprecation warning accepted).
+- [x] Verified live on production: landing/speakers/oc(+Aman)/login/leaderboard all 200, auth redirects work (307 → /login), leaderboard locked.
+- [x] Full suite green after reweight: **unit 19/19 · e2e 13/13 · security probe all denied**. One test updated (leaderboard weight 15/15/70 → 20/10/70); the transient failures were Supabase gateway timeouts + PostgREST schema-cache lag after the view recreation — both confirmed clean on rerun.
+- [x] Deploy method: CLI manual (`netlify deploy --prod`). Optional GitHub auto-deploy: docs/deploy-netlify.md has the 3-step link. Vercel still mirrors the repo (same DB) — share only the netlify.app URL with participants.
 
 ## v9 — people cards final + cleanup + deploy
 - [x] **People cards = cyscomvit.com/our-team board style** (studied live via browser): 3/4 aspect photo cards, grayscale(20%) → full color on hover, image zoom 110%, card lift (-translate-y-2), per-person accent color (12-color cycle on role text + hover border/glow), bottom gradient overlay with name + role, tagline fades in on hover. Site headings/copy untouched (SectionHeading as before). Speaker with 1 entry = feature card + tags.

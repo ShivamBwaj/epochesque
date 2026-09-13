@@ -1,48 +1,36 @@
-# Deploying Epochesque to Netlify (leaving Vercel)
+# Deploying Epochesque to Netlify — DONE ✅
 
-Vercel's `vercel.app` domain is blocked on the college wifi. Netlify (`netlify.app`) is not — so we're moving hosting there. **Nothing in the app code changes**: the database, auth, and file storage all live in Supabase, not on Vercel. Only the server that renders pages and runs Server Actions moves.
+**Production URL: https://epochesque.netlify.app**
+**Admin: https://app.netlify.com/projects/epochesque**
 
-## Why this is safe
+Vercel's `vercel.app` domain is blocked on the college wifi. Netlify (`netlify.app`) is not. The site is now deployed and live — this doc records what was done and how to work with it.
 
-- The site is a standard Next.js App Router app — Netlify's official Next.js runtime supports App Router, Server Actions, middleware, and ISR.
-- All file uploads (decks, photos, gallery) already go **browser → Supabase Storage directly** (that was the Vercel 4.5MB workaround) — they never pass through the host, so Netlify's function body limits don't matter.
-- The only "big" server-action body is the CSV team import, which is plain text (a few KB).
+## What was done (already complete)
 
-## One-time setup (~5 minutes)
+- Site `epochesque` created on Netlify (clean URL: `epochesque.netlify.app`)
+- Env vars set for **production + preview**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`
+- `src/proxy.ts` renamed to `src/middleware.ts` — Next 16's new "proxy" convention can't be bundled by Netlify's edge plugin; the old "middleware" name works fine (just logs a deprecation warning)
+- Deployed via `netlify deploy --prod` — verified live: landing, speakers, OC (Aman's card), login, leaderboard lock, auth redirects (307 to /login)
 
-1. **Commit & push the repo** (Netlify deploys from GitHub):
-   ```
-   git add -A
-   git commit -m "v8.2: roll spin rework + netlify config"
-   git push origin master
-   ```
-2. Go to **https://app.netlify.com** → sign in (GitHub login works) → **Add new site → Import an existing project** → pick **ShivamBwaj/epochesque**.
-3. Build settings are auto-read from `netlify.toml` (already in the repo) — don't change them.
-4. **Environment variables** (Site configuration → Environment variables) — add for Production **and** Preview:
+## Day-to-day commands
 
-   | Key | Value |
-   |---|---|
-   | `NEXT_PUBLIC_SUPABASE_URL` | from `.env.local` |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | from `.env.local` |
-   | `SUPABASE_SERVICE_ROLE_KEY` | from `.env.local` |
-   | `NEXT_PUBLIC_SITE_URL` | `https://<your-site>.netlify.app` |
+From the repo root (Netlify CLI is installed globally, already logged in):
 
-5. **Deploy**. First build takes ~2–3 min. You get `https://<something>.netlify.app`.
-6. (Optional) Change the site name in Site configuration → the URL becomes `https://epochesque.netlify.app`.
-7. (Optional) Test the whole flow once on the Netlify URL: login → roll stage → upload a deck → download it from admin.
+```
+netlify deploy --prod        # deploy current working directory to production
+netlify env:list --json      # see env vars
+netlify status               # who am I / which site is linked
+```
 
-## Supabase side (one small thing)
+## Optional: connect GitHub for auto-deploy on push
 
-Supabase Auth redirect URLs are email-link based and this app uses password login only, so nothing to change there. If you ever add a custom domain, add it to `NEXT_PUBLIC_SITE_URL` and redeploy.
+Currently deploys are manual (CLI). To make every `git push` auto-deploy:
+1. https://app.netlify.com/projects/epochesque/configuration → **Build & deploy → Link repository** → pick `ShivamBwaj/epochesque`
+2. Build command `npm run build`, publish `.next` (auto-read from `netlify.toml`)
+3. Then **stop the Vercel auto-deploys** if you don't want double hosting: Vercel dashboard → Project → Settings → Git → Disconnect
 
-## Keeping both (transition period)
+## Notes
 
-The Vercel deploy stays alive until you delete it — nothing breaks by leaving it. When the Netlify URL is confirmed working on college wifi:
-1. Share the Netlify URL with participants.
-2. Delete the Vercel project (or just stop mentioning the old URL).
-
-## Gotchas
-
-- **Vercel is still the git remote's auto-deploy** — pushing to GitHub will keep updating the Vercel site too. Harmless. To stop it: Vercel dashboard → Project → Settings → Git → Disconnect.
-- Netlify free tier includes 100GB bandwidth/month and 300 build minutes — plenty for a college event.
-- If a build fails on Netlify, check the deploy log for the env vars step (missing `SUPABASE_SERVICE_ROLE_KEY` is the usual suspect).
+- Uploads (decks, photos, gallery) go **browser → Supabase directly** — Netlify's function body limits never apply
+- Free tier: 100GB bandwidth/month, 300 build minutes — plenty for the event
+- The Vercel deploy still exists at epochesque.vercel.app until you delete it; the two share the same database, so **give participants the netlify.app URL only** to avoid confusion
