@@ -17,6 +17,7 @@ export interface SeedData {
   teamId: string
   teamUserId: string
   psIds: number[]
+  reactivatedPsIds: number[]
   startedAt: string
 }
 
@@ -30,6 +31,13 @@ export async function seed(): Promise<SeedData> {
   }))
   const { data: ps, error: psErr } = await admin.from("problem_statements").insert(psRows).select("id")
   if (psErr || !ps) throw new Error(`seed PS failed: ${psErr?.message}`)
+
+  const { data: realPs } = await admin.from("problem_statements").select("id, is_active").not("code", "like", `E2E-${RUN}-%`)
+  const reactivated = (realPs ?? []).filter((p) => p.is_active).map((p) => p.id)
+  const realPsIds = (realPs ?? []).map((p) => p.id)
+  if (realPsIds.length > 0) {
+    await admin.from("problem_statements").update({ is_active: false }).in("id", realPsIds)
+  }
 
   const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
     email: TEAM_EMAIL,
@@ -73,7 +81,7 @@ export async function seed(): Promise<SeedData> {
       { round: "final", is_published: false, published_at: null },
     ], { onConflict: "round" })
 
-  return { teamId: team.id, teamUserId: authUser.user.id, psIds: ps.map((p) => p.id), startedAt: new Date().toISOString() }
+  return { teamId: team.id, teamUserId: authUser.user.id, psIds: ps.map((p) => p.id), reactivatedPsIds: reactivated, startedAt: new Date().toISOString() }
 }
 
 export async function cleanup(seedData: SeedData) {
@@ -89,6 +97,9 @@ export async function cleanup(seedData: SeedData) {
   await admin.from("teams").delete().eq("id", seedData.teamId)
   await admin.auth.admin.deleteUser(seedData.teamUserId).catch(() => {})
   await admin.from("problem_statements").delete().in("id", seedData.psIds)
+  if (seedData.reactivatedPsIds?.length > 0) {
+    await admin.from("problem_statements").update({ is_active: true }).in("id", seedData.reactivatedPsIds)
+  }
   await admin
     .from("leaderboard_visibility")
     .upsert([

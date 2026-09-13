@@ -339,8 +339,13 @@ export async function deleteTeamAction(formData: FormData): Promise<void> {
   const teamId = String(formData.get("teamId") ?? "")
   if (!teamId) return
   const admin = createAdminClient()
-  const { data: team } = await admin.from("teams").select("auth_user_id, team_code").eq("id", teamId).maybeSingle()
+  const { data: team } = await admin.from("teams").select("auth_user_id, team_code, problem_statement_id").eq("id", teamId).maybeSingle()
   await admin.from("teams").delete().eq("id", teamId)
+  if (team?.problem_statement_id) {
+    try {
+      await admin.rpc("decrement_ps_taken", { ps_id: team.problem_statement_id })
+    } catch {}
+  }
   if (team?.auth_user_id) await admin.auth.admin.deleteUser(team.auth_user_id).catch(() => {})
   await audit(admin, user, "team.delete", team?.team_code ?? teamId)
   revalidatePath("/admin/teams")

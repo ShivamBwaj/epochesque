@@ -98,6 +98,10 @@ export type Database = {
         Args: never
         Returns: { code: string; description: string; id: number; title: string }[]
       }
+      decrement_ps_taken: {
+        Args: { ps_id: number }
+        Returns: never
+      }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
