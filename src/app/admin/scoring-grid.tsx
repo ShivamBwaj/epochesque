@@ -204,7 +204,7 @@ export function ScoringGrid({
                         <td className="px-4 py-2.5">
                           <Input
                             type="number"
-                            step="0.5"
+                            step="0.01"
                             min={0}
                             max={10000}
                             name={`score_${t.id}`}
