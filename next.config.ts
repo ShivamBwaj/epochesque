@@ -25,6 +25,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "30mb",
+    },
+  },
   async headers() {
     if (process.env.NODE_ENV !== "production") return [];
     return [{ source: "/:path*", headers: securityHeaders }];

@@ -2,9 +2,27 @@
 
 Source of truth for ongoing work. Update this file as things get done or new issues appear.
 
-## Status: ✅ v2.1 COMPLETE — dry-run verified, GUIDE.md written, OG/favicon added
+## Status: ✅ v3 COMPLETE — event-day controls, upload fix, manual teams, leader email edit
 
-## v2.1 additions
+## v3 changes (user feedback round)
+- [x] **FIX: SYSTEM FAULT on PPT upload** — root cause: Next.js Server Action default body limit of 1 MB. Raised to 30 MB in next.config.ts (`experimental.serverActions.bodySizeLimit`). Dev server restart required (done).
+- [x] **Event-day toggles**: `roll_open` + `final_open` flags (migration 0006, default CLOSED). Big switch cards on `/admin` Overview; Final page also has the final toggle. Roll: teams see "waiting for organizers" until flipped (or auto-opens at scheduled ps_release_at if set). Final submissions: open for ALL teams when flipped — advance/eliminate concept removed entirely.
+- [x] **Removed all Advance/Eliminate/Revert buttons** from `/admin/round1` and `/admin/final`; removed status dropdown from `/admin/teams` (status is display-only now). Round 1 page links straight to Scoring.
+- [x] **Edit leader email** (✎ on `/admin/teams`): updates the auth account email + team row + members array; rejects clashes; password unchanged — for on-the-spot leader changes.
+- [x] **Manual team add** (`/admin/teams/add`): walk-in registrations — team name/code, leader details, optional extra members; generates + shows password once.
+- [x] Round1/final submission server actions no longer check team status (round1: deadline only; final: final_open flag + deadline).
+- [x] Dashboard overview/problem-statement/final pages updated for the new gates.
+- [x] e2e seed now hermetic: force-unpublishes leaderboards + opens both toggles during the run, resets after.
+- [x] Cleaned user's manual test artifacts from live DB: 3 junk round1 scores (5/4/9) deleted; leaderboard unpublished. (22 real imported teams untouched.)
+- [x] Tests re-run: 9/9 e2e green, typecheck/lint clean.
+
+## Timing gates — behavior summary (user question)
+- Deadlines (round1/final): **optional**. Empty = never auto-closes, submissions always allowed. Set them only if you want auto-close.
+- Roll: **closed by default** until you click "Open roll" on Overview (or set ps_release_at in Settings for scheduled auto-open).
+- Final submissions: **closed by default** until you click "Open final" (Overview or Final page).
+- Event start: only drives the landing countdown; empty shows "TBA".
+
+## v2.1 additions (previous round)
 - [x] **Real-data dry-run import** (`scripts/dry-run-import.mjs`): all 22 real teams + auth users created against live DB with ZERO errors, spot-check login verified, full cleanup — DB pristine after
 - [x] **GUIDE.md** — the full human guide: architecture ("is there a backend" — yes, explained), every page & what it does, team flow, chronological admin runbook, security model, deploy, commands
 - [x] **OG image** (`src/app/opengraph-image.tsx`, edge ImageResponse — verified rendering HTTP 200 PNG) + **favicon** (`src/app/icon.svg`, dice logo)

@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { requireTeamPage } from "@/lib/auth"
-import { getEventTiming } from "@/lib/settings"
+import { getEventTiming, getEventFlags } from "@/lib/settings"
 import { createClient } from "@/lib/supabase/server"
 import type { TeamMember } from "@/lib/database.types"
 import { Badge, Card, EmptyState, LinkButton, SectionHeading, StatCard } from "@/components/ui"
@@ -18,25 +18,16 @@ function fmt(iso: string | null) {
 
 export default async function DashboardOverviewPage() {
   const { team } = await requireTeamPage()
-  const timing = await getEventTiming()
+  const [timing, flags] = await Promise.all([getEventTiming(), getEventFlags()])
   const supabase = await createClient()
   const { data: submissions } = await supabase.from("submissions").select("*").eq("team_id", team.id)
   const round1 = (submissions ?? []).find((s) => s.round === "round1") ?? null
   const final = (submissions ?? []).find((s) => s.round === "final") ?? null
   const members = (team.members as TeamMember[] | null) ?? []
 
-  let deadlineTarget: string | null = null
-  let deadlineLabel = ""
-  let activeStage = true
-  if (team.status === "registered" || team.status === "round1") {
-    deadlineTarget = timing.round1_deadline
-    deadlineLabel = "ROUND 1 CLOSES IN"
-  } else if (team.status === "advanced" || team.status === "finalist") {
-    deadlineTarget = timing.final_deadline
-    deadlineLabel = "FINAL ROUND CLOSES IN"
-  } else {
-    activeStage = false
-  }
+  const deadlineTarget = team.problem_statement_id ? timing.round1_deadline : null
+  const deadlineLabel = "ROUND 1 CLOSES IN"
+  const finalDeadlineActive = flags.finalOpen
 
   return (
     <div className="space-y-8">
@@ -101,8 +92,13 @@ export default async function DashboardOverviewPage() {
 
         <Card className="card-hover p-5">
           <p className="hud-label">FINAL ROUND SUBMISSION</p>
-          {team.status !== "advanced" && team.status !== "finalist" ? (
-            <p className="mt-3 text-sm text-slate-500">Only shortlisted teams advance to the final round.</p>
+          {!flags.finalOpen ? (
+            <div className="mt-3 space-y-3">
+              <p className="text-sm text-muted-foreground">Opens when the organizers flip the switch at the event.</p>
+              <LinkButton href="/dashboard/submit/final" variant="secondary" size="sm">
+                View page
+              </LinkButton>
+            </div>
           ) : final ? (
             <div className="mt-3 space-y-1">
               {final.url ? (
@@ -110,12 +106,12 @@ export default async function DashboardOverviewPage() {
                   href={final.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block truncate font-mono text-sm text-cyan-200 underline-offset-4 hover:underline"
+                  className="block truncate font-mono text-sm text-accent-hover underline-offset-4 hover:underline"
                 >
                   {final.url}
                 </a>
               ) : null}
-              <p className="text-xs text-slate-500">Submitted {fmt(final.submitted_at)}</p>
+              <p className="text-xs text-muted">{`Submitted ${fmt(final.submitted_at)}`}</p>
               <div className="pt-2">
                 <LinkButton href="/dashboard/submit/final" variant="secondary" size="sm">
                   Manage submission
@@ -124,8 +120,8 @@ export default async function DashboardOverviewPage() {
             </div>
           ) : (
             <div className="mt-3 space-y-3">
-              <p className="text-sm text-slate-300">No repo linked yet.</p>
-              <LinkButton href="/dashboard/submit/final" variant="secondary" size="sm">
+              <p className="text-sm text-foreground/80">Final round is open — no repo linked yet.</p>
+              <LinkButton href="/dashboard/submit/final" size="sm">
                 Submit final repo
               </LinkButton>
             </div>
@@ -135,10 +131,12 @@ export default async function DashboardOverviewPage() {
         <Card className="p-5">
           <p className="hud-label">DEADLINE</p>
           <div className="mt-4">
-            {activeStage ? (
+            {finalDeadlineActive && timing.final_deadline ? (
+              <Countdown target={timing.final_deadline} label="FINAL ROUND CLOSES IN" pastLabel="CLOSED" />
+            ) : deadlineTarget ? (
               <Countdown target={deadlineTarget} label={deadlineLabel} pastLabel="CLOSED" />
             ) : (
-              <p className="text-sm text-slate-500">No active deadline — your run this season has ended.</p>
+              <p className="text-sm text-muted-foreground">No active deadline — the organizers haven&apos;t set one.</p>
             )}
           </div>
         </Card>

@@ -59,6 +59,20 @@ export async function seed(): Promise<SeedData> {
     throw new Error(`seed team failed: ${teamErr?.message}`)
   }
 
+  await admin.from("event_settings").upsert(
+    [
+      { key: "roll_open", value: true },
+      { key: "final_open", value: true },
+    ],
+    { onConflict: "key" }
+  )
+  await admin
+    .from("leaderboard_visibility")
+    .upsert([
+      { round: "round1", is_published: false, published_at: null },
+      { round: "final", is_published: false, published_at: null },
+    ], { onConflict: "round" })
+
   return { teamId: team.id, teamUserId: authUser.user.id, psIds: ps.map((p) => p.id), startedAt: new Date().toISOString() }
 }
 
@@ -84,4 +98,11 @@ export async function cleanup(seedData: SeedData) {
   await admin.from("announcements").delete().eq("kind", "winners")
   await admin.from("announcements").delete().eq("kind", "notice")
   await admin.from("admin_audit").delete().gte("created_at", seedData.startedAt)
+  await admin.from("event_settings").upsert(
+    [
+      { key: "roll_open", value: false },
+      { key: "final_open", value: false },
+    ],
+    { onConflict: "key" }
+  )
 }

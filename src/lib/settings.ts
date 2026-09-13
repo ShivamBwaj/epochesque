@@ -20,7 +20,28 @@ export const getEventTiming = cache(async (): Promise<EventTiming> => {
   }
 })
 
+export interface EventFlags {
+  rollOpen: boolean
+  finalOpen: boolean
+}
+
+export const getEventFlags = cache(async (): Promise<EventFlags> => {
+  const supabase = await createClient()
+  const { data } = await supabase.from("event_settings").select("key, value").in("key", ["roll_open", "final_open"])
+  const map = new Map((data ?? []).map((r) => [r.key, r.value]))
+  return {
+    rollOpen: map.get("roll_open") === true,
+    finalOpen: map.get("final_open") === true,
+  }
+})
+
 export function deadlinePassed(deadline: string | null, now = new Date()): boolean {
   if (!deadline) return false
   return now.getTime() > new Date(deadline).getTime()
+}
+
+export function rollIsOpen(flags: EventFlags, timing: EventTiming): boolean {
+  if (flags.rollOpen) return true
+  if (timing.ps_release_at && deadlinePassed(timing.ps_release_at)) return true
+  return false
 }

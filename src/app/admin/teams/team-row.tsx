@@ -1,47 +1,58 @@
 "use client"
 
-import { useActionState } from "react"
-import { TEAM_STATUSES } from "@/lib/database.types"
+import { useActionState, useState } from "react"
 import type { Team, TeamMember } from "@/lib/database.types"
-import { deleteTeamAction, resetTeamPasswordAction, updateTeamStatusAction } from "@/lib/actions/admin"
-import type { ResetPasswordResult } from "@/lib/actions/admin"
+import { deleteTeamAction, resetTeamPasswordAction, updateTeamLeaderEmailAction } from "@/lib/actions/admin"
+import type { ActionResult, ResetPasswordResult } from "@/lib/actions/admin"
 import { CopyField } from "@/components/copy-field"
 import { SubmitButton } from "@/components/submit-button"
-import { Select, StatusBadge } from "@/components/ui"
+import { Button, Input, StatusBadge } from "@/components/ui"
 
 export function TeamRow({ team, psCode, createdAt }: { team: Team; psCode: string; createdAt: string }) {
   const [resetState, resetAction] = useActionState<ResetPasswordResult, FormData>(resetTeamPasswordAction, { ok: false })
+  const [emailState, emailAction] = useActionState<ActionResult, FormData>(updateTeamLeaderEmailAction, { ok: false })
+  const [editingEmail, setEditingEmail] = useState(false)
   const members = (team.members as TeamMember[] | null) ?? []
 
   return (
-    <tr className="align-top transition hover:bg-slate-900/30">
-      <td className="px-4 py-3 font-mono text-xs tracking-wide text-cyan-300">{team.team_code}</td>
-      <td className="px-4 py-3 font-medium text-slate-100">{team.team_name}</td>
-      <td className="px-4 py-3 text-slate-400">{team.leader_email}</td>
-      <td className="px-4 py-3 tabular-nums text-slate-300">{members.length}</td>
-      <td className="px-4 py-3 font-mono text-xs text-slate-400">{psCode}</td>
+    <tr className="align-top transition hover:bg-white/[0.02]">
+      <td className="px-4 py-3 font-mono text-xs tracking-wide text-accent-hover">{team.team_code}</td>
+      <td className="px-4 py-3 font-medium text-foreground">{team.team_name}</td>
+      <td className="px-4 py-3">
+        {editingEmail ? (
+          <form action={emailAction} className="flex min-w-56 items-center gap-2">
+            <input type="hidden" name="teamId" value={team.id} />
+            <Input name="email" type="email" defaultValue={team.leader_email} className="w-52 text-xs" aria-label="New leader email" required />
+            <SubmitButton size="sm" pendingText="…">
+              Save
+            </SubmitButton>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setEditingEmail(false)}>
+              ✕
+            </Button>
+          </form>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">{team.leader_email}</span>
+            <Button variant="ghost" size="sm" onClick={() => setEditingEmail(true)} title="Change leader email">
+              ✎
+            </Button>
+          </div>
+        )}
+        {emailState.ok && emailState.message ? (
+          <p className="mt-1 text-xs text-emerald-300">{emailState.message}</p>
+        ) : null}
+        {!emailState.ok && emailState.error ? (
+          <p className="mt-1 text-xs text-red-300">{emailState.error}</p>
+        ) : null}
+      </td>
+      <td className="px-4 py-3 tabular-nums text-foreground/80">{members.length}</td>
+      <td className="px-4 py-3 font-mono text-xs text-muted">{psCode}</td>
       <td className="px-4 py-3">
         <StatusBadge status={team.status} />
       </td>
-      <td className="px-4 py-3 text-xs text-slate-500">{createdAt}</td>
+      <td className="px-4 py-3 text-xs text-muted/70">{createdAt}</td>
       <td className="px-4 py-3">
-        <div className="flex min-w-56 flex-col gap-2">
-          <form action={updateTeamStatusAction}>
-            <input type="hidden" name="teamId" value={team.id} />
-            <Select
-              name="status"
-              defaultValue={team.status}
-              onChange={(e) => e.currentTarget.form?.requestSubmit()}
-              className="w-40 text-xs"
-              aria-label={`Status for ${team.team_code}`}
-            >
-              {TEAM_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </Select>
-          </form>
+        <div className="flex min-w-48 flex-col gap-2">
           <div className="flex flex-wrap gap-2">
             <form action={resetAction}>
               <input type="hidden" name="teamId" value={team.id} />
@@ -61,10 +72,10 @@ export function TeamRow({ team, psCode, createdAt }: { team: Team; psCode: strin
             </form>
           </div>
           {resetState.ok && resetState.password ? (
-            <div className="space-y-1.5 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-2.5">
+            <div className="space-y-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5">
               <p className="text-xs text-emerald-300">{resetState.message ?? "New password:"}</p>
               <CopyField value={resetState.password} label="password" />
-              <p className="text-[11px] text-slate-500">Shown once — copy it now.</p>
+              <p className="text-[11px] text-muted/70">Shown once — copy it now.</p>
             </div>
           ) : null}
           {!resetState.ok && resetState.error ? <p className="text-xs text-red-300">{resetState.error}</p> : null}

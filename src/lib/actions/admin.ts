@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser, isAdmin } from "@/lib/auth"
-import { TEAM_STATUSES } from "@/lib/database.types"
 import type { TeamMember, WinnersEntry } from "@/lib/database.types"
 import { genPassword } from "@/lib/csv"
 import { sanitizeFileName } from "@/lib/validate"
@@ -171,18 +170,149 @@ export async function importTeamsConfirmAction(_prev: ImportResult, formData: Fo
   return { ok: created > 0, createdCount: created, credentials, errors }
 }
 
-export async function updateTeamStatusAction(formData: FormData): Promise<void> {
+export async function updateTeamLeaderEmailAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireAdminAction()
-  if (!user) return
+  if (!user) return { ok: false, error: "Admins only." }
+
   const teamId = String(formData.get("teamId") ?? "")
-  const status = String(formData.get("status") ?? "")
-  if (!teamId || !TEAM_STATUSES.includes(status as never)) return
+  const newEmail = String(formData.get("email") ?? "").trim().toLowerCase()
+  if (!teamId) return { ok: false, error: "Missing team." }
+  if (!EMAIL_RE.test(newEmail)) return { ok: false, error: "Enter a valid email address." }
+
   const admin = createAdminClient()
-  await admin.from("teams").update({ status: status as never }).eq("id", teamId)
-  await audit(admin, user, "team.status", teamId, { status })
+  const { data: team } = await admin.from("teams").select("auth_user_id, team_code, leader_email, members").eq("id", teamId).maybeSingle()
+  if (!team) return { ok: false, error: "Team not found." }
+  if (team.leader_email === newEmail) return { ok: false, error: "That is already the leader's email." }
+  if (!team.auth_user_id) return { ok: false, error: "Team has no linked login." }
+
+  const { data: clash } = await admin.from("teams").select("team_code").eq("leader_email", newEmail).maybeSingle()
+  if (clash) return { ok: false, error: `That email already belongs to ${clash.team_code}.` }
+
+  const { error: authErr } = await admin.auth.admin.updateUserById(team.auth_user_id, { email: newEmail, email_confirm: true })
+  if (authErr) return { ok: false, error: authErr.message }
+
+  const members = Array.isArray(team.members) ? (team.members as unknown as TeamMember[]) : []
+  const fixedMembers = members.map((m) => (m.email === team.leader_email ? { ...m, email: newEmail } : m))
+
+  const { error: dbErr } = await admin
+    .from("teams")
+    .update({ leader_email: newEmail, members: (fixedMembers.length > 0 ? fixedMembers : members) as never })
+    .eq("id", teamId)
+  if (dbErr) return { ok: false, error: dbErr.message }
+
+  await audit(admin, user, "team.leader_email", team.team_code, { from: team.leader_email, to: newEmail })
+  revalidatePath("/admin/teams")
+  return { ok: true, message: `Leader email for ${team.team_code} is now ${newEmail}. Their password is unchanged.` }
+}
+
+export interface ManualMemberInput {
+  name: string
+  email?: string | null
+  phone?: string | null
+  college?: string | null
+}
+
+export interface AddTeamResult extends ActionResult {
+  password?: string
+  team_code?: string
+}
+
+export async function addTeamManualAction(_prev: AddTeamResult, formData: FormData): Promise<AddTeamResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+
+  const teamName = String(formData.get("teamName") ?? "").trim().slice(0, 120)
+  const leaderName = String(formData.get("leaderName") ?? "").trim().slice(0, 120)
+  const leaderEmail = String(formData.get("leaderEmail") ?? "").trim().toLowerCase()
+  const leaderPhone = String(formData.get("leaderPhone") ?? "").trim().slice(0, 20) || null
+  const leaderCollege = String(formData.get("leaderCollege") ?? "").trim().slice(0, 120) || null
+
+  if (!teamName) return { ok: false, error: "Team name is required." }
+  if (!leaderName) return { ok: false, error: "Leader name is required." }
+  if (!EMAIL_RE.test(leaderEmail)) return { ok: false, error: "Enter a valid leader email." }
+
+  let extraMembers: ManualMemberInput[] = []
+  try {
+    extraMembers = JSON.parse(String(formData.get("members") ?? "[]"))
+    if (!Array.isArray(extraMembers) || extraMembers.length > 10) throw new Error()
+  } catch {
+    return { ok: false, error: "Invalid members data." }
+  }
+
+  const admin = createAdminClient()
+  const { data: clash } = await admin.from("teams").select("team_code").eq("leader_email", leaderEmail).maybeSingle()
+  if (clash) return { ok: false, error: `That email already belongs to ${clash.team_code}.` }
+
+  let teamCode = String(formData.get("teamCode") ?? "").trim().replace(/[^A-Za-z0-9-]/g, "").slice(0, 24)
+  if (!teamCode) {
+    const { count } = await admin.from("teams").select("id", { count: "exact", head: true })
+    teamCode = `T-${String((count ?? 0) + 1).padStart(3, "0")}`
+  }
+  const { data: codeClash } = await admin.from("teams").select("team_code").eq("team_code", teamCode).maybeSingle()
+  if (codeClash) return { ok: false, error: `Team code ${teamCode} is already taken — pick another.` }
+
+  const password = genPassword()
+  const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
+    email: leaderEmail,
+    password,
+    email_confirm: true,
+    user_metadata: { team_code: teamCode, role: "team" },
+  })
+  if (authErr || !authUser?.user) return { ok: false, error: authErr?.message ?? "Could not create login." }
+
+  const membersJson: TeamMember[] = [
+    { name: leaderName, email: leaderEmail, phone: leaderPhone, college: leaderCollege },
+    ...extraMembers
+      .filter((m) => m && String(m.name ?? "").trim())
+      .map((m) => ({
+        name: String(m.name).trim().slice(0, 120),
+        email: m.email ? String(m.email).trim().toLowerCase() : null,
+        phone: m.phone ? String(m.phone).trim().slice(0, 20) : null,
+        college: m.college ? String(m.college).trim().slice(0, 120) : null,
+      })),
+  ]
+
+  const { error: teamErr } = await admin.from("teams").insert({
+    team_code: teamCode,
+    team_name: teamName,
+    members: membersJson as never,
+    leader_email: leaderEmail,
+    auth_user_id: authUser.user.id,
+    status: "registered",
+  })
+  if (teamErr) {
+    await admin.auth.admin.deleteUser(authUser.user.id).catch(() => {})
+    return { ok: false, error: teamErr.message }
+  }
+
+  await audit(admin, user, "team.add_manual", teamCode, { leader: leaderEmail })
   revalidatePath("/admin/teams")
   revalidatePath("/admin/round1")
+  return { ok: true, team_code: teamCode, password, message: `Team ${teamCode} created. Login: ${leaderEmail}` }
+}
+
+export async function setRollOpenAction(formData: FormData): Promise<void> {
+  const user = await requireAdminAction()
+  if (!user) return
+  const open = String(formData.get("open") ?? "") === "true"
+  const admin = createAdminClient()
+  await admin.from("event_settings").upsert({ key: "roll_open", value: open as never }, { onConflict: "key" })
+  await audit(admin, user, open ? "roll.open" : "roll.close", undefined, undefined)
+  revalidatePath("/admin")
+  revalidatePath("/dashboard/problem-statement")
+}
+
+export async function setFinalOpenAction(formData: FormData): Promise<void> {
+  const user = await requireAdminAction()
+  if (!user) return
+  const open = String(formData.get("open") ?? "") === "true"
+  const admin = createAdminClient()
+  await admin.from("event_settings").upsert({ key: "final_open", value: open as never }, { onConflict: "key" })
+  await audit(admin, user, open ? "final.open" : "final.close", undefined, undefined)
+  revalidatePath("/admin")
   revalidatePath("/admin/final")
+  revalidatePath("/dashboard/submit/final")
+  revalidatePath("/dashboard")
 }
 
 export async function resetTeamPasswordAction(_prev: ResetPasswordResult, formData: FormData): Promise<ResetPasswordResult> {

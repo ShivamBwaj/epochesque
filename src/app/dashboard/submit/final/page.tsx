@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { requireTeamPage } from "@/lib/auth"
-import { getEventTiming, deadlinePassed } from "@/lib/settings"
+import { getEventTiming, getEventFlags, deadlinePassed } from "@/lib/settings"
 import { createClient } from "@/lib/supabase/server"
 import { Alert, Card, SectionHeading } from "@/components/ui"
 import { FinalForm } from "../../final-form"
@@ -17,8 +17,7 @@ function fmt(iso: string | null) {
 
 export default async function SubmitFinalPage() {
   const { team } = await requireTeamPage()
-  const timing = await getEventTiming()
-  const eligible = team.status === "advanced" || team.status === "finalist"
+  const [timing, flags] = await Promise.all([getEventTiming(), getEventFlags()])
   const closed = deadlinePassed(timing.final_deadline)
   const supabase = await createClient()
   const { data } = await supabase
@@ -45,20 +44,20 @@ export default async function SubmitFinalPage() {
               href={submission.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 block truncate font-mono text-sm text-cyan-200 underline-offset-4 hover:underline"
+              className="mt-2 block truncate font-mono text-sm text-accent-hover underline-offset-4 hover:underline"
             >
               {submission.url}
             </a>
           ) : null}
-          <p className="mt-1 text-xs text-slate-500">Submitted {fmt(submission.submitted_at)}</p>
-          {eligible && !closed ? (
+          <p className="mt-1 text-xs text-muted">{`Submitted ${fmt(submission.submitted_at)}`}</p>
+          {flags.finalOpen && !closed ? (
             <p className="mt-3 text-xs text-emerald-300/80">You can replace it until the deadline.</p>
           ) : null}
         </Card>
       ) : null}
 
-      {!eligible ? (
-        <Alert tone="info">Only shortlisted teams advance to the final round. Watch the leaderboard for results.</Alert>
+      {!flags.finalOpen ? (
+        <Alert tone="info">Final round submissions open when the organizers flip the switch at the event. Watch for the announcement.</Alert>
       ) : closed ? (
         <Alert tone="error">Final round submissions are closed — the deadline has passed.</Alert>
       ) : (

@@ -1,0 +1,393 @@
+
+> epoch@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.5 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.56.1:3000
+- Environments: .env.local
+✓ Ready in 592ms
+✓ Running next.config.ts took 73ms
+⚠ The Edge Runtime is deprecated. You can use the "nodejs" runtime instead. Learn more: https://nextjs.org/docs/messages/edge-runtime-deprecated
+
+ GET / 200 in 4.6s (next.js: 2.7s, proxy.ts: 206ms, application-code: 1683ms)
+ GET / 200 in 1636ms (next.js: 39ms, proxy.ts: 17ms, application-code: 1579ms)
+ GET /login 200 in 901ms (next.js: 777ms, proxy.ts: 14ms, application-code: 110ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+ GET /admin 200 in 4.6s (next.js: 650ms, proxy.ts: 933ms, application-code: 3.0s)
+ POST /login 200 in 7.3s (next.js: 7ms, proxy.ts: 12ms, application-code: 7.3s)
+  └─ ƒ loginAction({}, {}) in 2697ms src/lib/actions/auth.ts
+ GET /admin/settings 200 in 2.9s (next.js: 934ms, proxy.ts: 697ms, application-code: 1292ms)
+ GET /admin/audit 200 in 2.7s (next.js: 428ms, proxy.ts: 948ms, application-code: 1339ms)
+ GET /admin/gallery 200 in 2.6s (next.js: 743ms, proxy.ts: 513ms, application-code: 1361ms)
+ GET /admin/notices 200 in 2.7s (next.js: 466ms, proxy.ts: 925ms, application-code: 1322ms)
+ GET /admin/announce-winners 200 in 3.3s (next.js: 489ms, proxy.ts: 940ms, application-code: 1855ms)
+ GET /admin/scoring 200 in 4.7s (next.js: 734ms, proxy.ts: 735ms, application-code: 3.3s)
+ GET /admin/final 200 in 4.7s (next.js: 471ms, proxy.ts: 732ms, application-code: 3.5s)
+ GET /admin/round1 200 in 4.2s (next.js: 452ms, proxy.ts: 721ms, application-code: 3.0s)
+ GET /admin/problem-statements 200 in 2.5s (next.js: 710ms, proxy.ts: 429ms, application-code: 1359ms)
+ POST /admin/problem-statements 200 in 6.3s (next.js: 11ms, proxy.ts: 1477ms, application-code: 4.8s)
+  └─ ƒ upsertProblemStatementAction({"ok":false}, {}) in 3527ms src/lib/actions/admin.ts
+ POST /admin/problem-statements 200 in 4.1s (next.js: 6ms, proxy.ts: 857ms, application-code: 3.2s)
+  └─ ƒ upsertProblemStatementAction({"message":"Problem statement added.","ok":true}, {}) in 1955ms src/lib/actions/admin.ts
+ GET /admin/teams/import 200 in 2.1s (next.js: 551ms, proxy.ts: 696ms, application-code: 881ms)
+ GET /admin/teams 200 in 3.3s (next.js: 701ms, proxy.ts: 437ms, application-code: 2.2s)
+ GET /admin/teams/import 200 in 1288ms (next.js: 8ms, proxy.ts: 441ms, application-code: 839ms)
+ GET /admin/teams 200 in 4.3s (next.js: 9ms, proxy.ts: 1566ms, application-code: 2.8s)
+ GET /admin/teams/import 200 in 1835ms (next.js: 8ms, proxy.ts: 937ms, application-code: 890ms)
+ POST /admin/teams/import 200 in 25.7s (next.js: 7ms, proxy.ts: 1091ms, application-code: 24.6s)
+  └─ ƒ importTeamsConfirmAction({"ok":false}, {}) in 23739ms src/lib/actions/admin.ts
+ GET /admin/teams 200 in 2.4s (next.js: 8ms, proxy.ts: 658ms, application-code: 1690ms)
+ GET /admin/teams/import 200 in 2.1s (next.js: 9ms, proxy.ts: 1175ms, application-code: 882ms)
+ GET /admin/teams 200 in 2.1s (next.js: 7ms, proxy.ts: 431ms, application-code: 1701ms)
+ GET /admin 200 in 3.9s (next.js: 8ms, proxy.ts: 1108ms, application-code: 2.7s)
+ GET / 200 in 389ms (next.js: 7ms, proxy.ts: 8ms, application-code: 375ms)
+ POST /admin 200 in 1394ms (next.js: 7ms, proxy.ts: 550ms, application-code: 837ms)
+  └─ ƒ logoutAction() in 395ms src/lib/actions/auth.ts
+ GET /login 200 in 50ms (next.js: 9ms, proxy.ts: 12ms, application-code: 29ms)
+ GET /dashboard 200 in 2.6s (next.js: 550ms, proxy.ts: 348ms, application-code: 1681ms)
+ POST /login 200 in 4.0s (next.js: 10ms, proxy.ts: 9ms, application-code: 4.0s)
+  └─ ƒ loginAction({}, {}) in 1408ms src/lib/actions/auth.ts
+ GET /dashboard/problem-statement 200 in 3.4s (next.js: 786ms, proxy.ts: 673ms, application-code: 1900ms)
+ POST /dashboard/problem-statement 200 in 4.3s (next.js: 7ms, proxy.ts: 327ms, application-code: 3.9s)
+  └─ ƒ rollProblemStatementAction() in 2057ms src/lib/actions/team.ts
+ GET /dashboard/problem-statement 200 in 2.1s (next.js: 9ms, proxy.ts: 350ms, application-code: 1752ms)
+ GET /dashboard/submit/round1 200 in 3.0s (next.js: 461ms, proxy.ts: 561ms, application-code: 2.0s)
+⨯ Error: Body exceeded 1 MB limit.
+To configure the body size limit for Server Actions, see: https://nextjs.org/docs/app/api-reference/next-config-js/serverActions#bodysizelimit
+    at ignore-listed frames {
+  statusCode: 413,
+  digest: '1266948137@E394'
+}
+ POST /dashboard/submit/round1 500 in 1255ms (next.js: 35ms, proxy.ts: 757ms, application-code: 462ms)
+ GET /dashboard/submit/final 200 in 5.3s (next.js: 722ms, proxy.ts: 1312ms, application-code: 3.3s)
+ GET / 200 in 411ms (next.js: 8ms, proxy.ts: 9ms, application-code: 394ms)
+ POST /dashboard/submit/final 200 in 1600ms (next.js: 7ms, proxy.ts: 771ms, application-code: 822ms)
+  └─ ƒ logoutAction() in 387ms src/lib/actions/auth.ts
+ GET /login 200 in 45ms (next.js: 7ms, proxy.ts: 8ms, application-code: 30ms)
+ GET /admin 200 in 2.9s (next.js: 9ms, proxy.ts: 356ms, application-code: 2.5s)
+ POST /login 200 in 4.2s (next.js: 7ms, proxy.ts: 8ms, application-code: 4.2s)
+  └─ ƒ loginAction({}, {}) in 1302ms src/lib/actions/auth.ts
+ GET /admin/teams 200 in 2.1s (next.js: 8ms, proxy.ts: 462ms, application-code: 1640ms)
+ GET /admin/teams/import 200 in 2.9s (next.js: 8ms, proxy.ts: 1452ms, application-code: 1431ms)
+ GET /admin/teams 200 in 2.3s (next.js: 8ms, proxy.ts: 881ms, application-code: 1436ms)
+ GET /admin/teams/import 200 in 2.6s (next.js: 7ms, proxy.ts: 1212ms, application-code: 1332ms)
+ GET /admin/problem-statements 200 in 2.1s (next.js: 8ms, proxy.ts: 409ms, application-code: 1641ms)
+ GET /admin/round1 200 in 2.4s (next.js: 8ms, proxy.ts: 322ms, application-code: 2.1s)
+ GET /admin/final 200 in 4.7s (next.js: 9ms, proxy.ts: 1375ms, application-code: 3.3s)
+ GET /admin/scoring 200 in 2.2s (next.js: 9ms, proxy.ts: 458ms, application-code: 1707ms)
+ POST /admin/scoring 200 in 4.4s (next.js: 7ms, proxy.ts: 374ms, application-code: 4.0s)
+  └─ ƒ saveScoresAction({"ok":false}, {}) in 2185ms src/lib/actions/admin.ts
+ GET /leaderboard 200 in 1750ms (next.js: 411ms, proxy.ts: 335ms, application-code: 1004ms)
+ POST /admin/scoring 200 in 3.9s (next.js: 7ms, proxy.ts: 355ms, application-code: 3.5s)
+  └─ ƒ setLeaderboardPublishedAction({}) in 1419ms src/lib/actions/admin.ts
+ GET /admin/announce-winners 200 in 1572ms (next.js: 20ms, proxy.ts: 534ms, application-code: 1018ms)
+ GET /admin/notices 200 in 1631ms (next.js: 13ms, proxy.ts: 589ms, application-code: 1029ms)
+ GET /admin/gallery 200 in 1919ms (next.js: 12ms, proxy.ts: 370ms, application-code: 1537ms)
+ GET /admin/audit 200 in 1579ms (next.js: 11ms, proxy.ts: 538ms, application-code: 1029ms)
+ GET /admin/settings 200 in 1614ms (next.js: 12ms, proxy.ts: 483ms, application-code: 1119ms)
+ GET /admin/round1 200 in 4.8s (next.js: 15ms, proxy.ts: 1225ms, application-code: 3.6s)
+ GET /admin/problem-statements 200 in 1550ms (next.js: 13ms, proxy.ts: 412ms, application-code: 1125ms)
+ GET /admin/teams/import 200 in 1600ms (next.js: 12ms, proxy.ts: 774ms, application-code: 814ms)
+ GET /speakers 200 in 2.0s (next.js: 662ms, proxy.ts: 555ms, application-code: 792ms)
+ GET /oc 200 in 930ms (next.js: 485ms, proxy.ts: 405ms, application-code: 41ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+ GET /admin/round1 200 in 4.1s (next.js: 7ms, proxy.ts: 902ms, application-code: 3.2s)
+⚠ Found a change in next.config.ts. Restarting the server to apply the changes...
+▲ Next.js 16.3.5 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.56.1:3000
+- Environments: .env.local
+✓ Ready in 564ms
+✓ Running next.config.ts took 83ms
+⚠ The Edge Runtime is deprecated. You can use the "nodejs" runtime instead. Learn more: https://nextjs.org/docs/messages/edge-runtime-deprecated
+- Experiments (use with caution):
+  · serverActions
+
+ GET /leaderboard 200 in 2.6s (next.js: 298ms, proxy.ts: 1223ms, application-code: 1121ms)
+ GET /oc 200 in 3.6s (next.js: 93ms, proxy.ts: 1798ms, application-code: 1711ms)
+ GET /admin/round1 200 in 4.2s (next.js: 204ms, proxy.ts: 1513ms, application-code: 2.5s)
+ GET /leaderboard 200 in 561ms (next.js: 36ms, proxy.ts: 472ms, application-code: 53ms)
+ GET /oc 200 in 565ms (next.js: 33ms, proxy.ts: 450ms, application-code: 83ms)
+ GET /admin/round1 200 in 576ms (next.js: 6ms, proxy.ts: 395ms, application-code: 175ms)
+ GET /leaderboard 200 in 548ms (next.js: 53ms, proxy.ts: 398ms, application-code: 98ms)
+ GET /oc 200 in 548ms (next.js: 31ms, proxy.ts: 396ms, application-code: 121ms)
+ GET /admin/round1 200 in 557ms (next.js: 10ms, proxy.ts: 398ms, application-code: 149ms)
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+✓ Compiled in 186ms
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+⨯ ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  [90m2 |[0m [36mimport[0m { requireAdminPage } [36mfrom[0m [32m"@/lib/auth"[0m
+  [90m3 |[0m [36mimport[0m { createAdminClient } [36mfrom[0m [32m"@/lib/supabase/admin"[0m
+[31m[1m>[0m [90m4 |[0m [36mimport[0m { updateTeamStatusAction } [36mfrom[0m [32m"@/lib/actions/admin"[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m [36mimport[0m { [33mSubmitButton[0m } [36mfrom[0m [32m"@/components/submit-button"[0m
+  [90m6 |[0m [36mimport[0m { [33mCard[0m, [33mEmptyState[0m, [33mSectionHeading[0m, [33mStatCard[0m, [33mStatusBadge[0m } [36mfrom[0m [32m"@/components/ui"[0m
+  [90m7 |[0m
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+ GET /admin/round1 500 in 2.3s (next.js: 942ms, proxy.ts: 1186ms, application-code: 157ms)
+ GET /oc 500 in 2.3s (next.js: 1081ms, proxy.ts: 1177ms, application-code: 19ms)
+ GET /leaderboard 500 in 2.3s (next.js: 1088ms, proxy.ts: 1182ms, application-code: 12ms)
+ GET /leaderboard 500 in 410ms (next.js: 16ms, proxy.ts: 385ms, application-code: 9ms)
+ GET /oc 500 in 436ms (next.js: 24ms, proxy.ts: 400ms, application-code: 13ms)
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+⨯ ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  [90m2 |[0m [36mimport[0m { requireAdminPage } [36mfrom[0m [32m"@/lib/auth"[0m
+  [90m3 |[0m [36mimport[0m { createAdminClient } [36mfrom[0m [32m"@/lib/supabase/admin"[0m
+[31m[1m>[0m [90m4 |[0m [36mimport[0m { updateTeamStatusAction } [36mfrom[0m [32m"@/lib/actions/admin"[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m [36mimport[0m { [33mSubmitButton[0m } [36mfrom[0m [32m"@/components/submit-button"[0m
+  [90m6 |[0m [36mimport[0m { [33mCard[0m, [33mEmptyState[0m, [33mSectionHeading[0m, [33mStatCard[0m, [33mStatusBadge[0m } [36mfrom[0m [32m"@/components/ui"[0m
+  [90m7 |[0m
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+
+ GET /oc 500 in 641ms (next.js: 15ms, proxy.ts: 607ms, application-code: 18ms)
+ GET /admin/round1 500 in 643ms (next.js: 27ms, proxy.ts: 608ms, application-code: 8ms)
+ GET /leaderboard 500 in 959ms (next.js: 22ms, proxy.ts: 922ms, application-code: 14ms)
+ GET /leaderboard 500 in 582ms (next.js: 34ms, proxy.ts: 536ms, application-code: 12ms)
+[browser] Uncaught Error: ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+
+    at <unknown> (Error: ./src/app/admin/round1/page.tsx:4:1)
+    at <unknown> (Error: (./src/app/admin/round1/page.tsx:4:1)
+[browser] Uncaught Error: ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+
+    at <unknown> (Error: ./src/app/admin/round1/page.tsx:4:1)
+    at <unknown> (Error: (./src/app/admin/round1/page.tsx:4:1)
+[browser] Uncaught Error: ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+
+    at <unknown> (Error: ./src/app/admin/round1/page.tsx:4:1)
+    at <unknown> (Error: (./src/app/admin/round1/page.tsx:4:1)
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+[browser] ./src/app/admin/round1/page.tsx:4:1
+Error: Export updateTeamStatusAction doesn't exist in target module
+  2 | import { requireAdminPage } from "@/lib/auth"
+  3 | import { createAdminClient } from "@/lib/supabase/admin"
+> 4 | import { updateTeamStatusAction } from "@/lib/actions/admin"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { SubmitButton } from "@/components/submit-button"
+  6 | import { Card, EmptyState, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+  7 |
+
+The export updateTeamStatusAction was not found in module [project]/src/lib/actions/admin.ts [app-rsc] (ecmascript).
+Did you mean to import updateTeamLeaderEmailAction?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+ GET /oc 200 in 1472ms (next.js: 91ms, proxy.ts: 391ms, application-code: 990ms)
+ GET /leaderboard 200 in 1474ms (next.js: 12ms, proxy.ts: 753ms, application-code: 710ms)
+ GET /admin/round1 200 in 2.5s (next.js: 161ms, proxy.ts: 395ms, application-code: 1906ms)
+ GET /admin/round1 200 in 571ms (next.js: 4ms, proxy.ts: 511ms, application-code: 56ms)
+ GET /oc 200 in 672ms (next.js: 5ms, proxy.ts: 636ms, application-code: 31ms)
+ GET /leaderboard 200 in 1076ms (next.js: 7ms, proxy.ts: 1019ms, application-code: 51ms)
+ GET /leaderboard 200 in 616ms (next.js: 7ms, proxy.ts: 471ms, application-code: 137ms)
+ GET /oc 200 in 615ms (next.js: 13ms, proxy.ts: 513ms, application-code: 89ms)
+ GET /admin/round1 200 in 623ms (next.js: 40ms, proxy.ts: 525ms, application-code: 58ms)
+ GET /admin/round1 200 in 628ms (next.js: 5ms, proxy.ts: 568ms, application-code: 55ms)
+ GET /oc 200 in 1164ms (next.js: 7ms, proxy.ts: 1082ms, application-code: 75ms)
+ GET /leaderboard 200 in 1166ms (next.js: 37ms, proxy.ts: 1086ms, application-code: 43ms)
+ GET /oc 200 in 836ms (next.js: 9ms, proxy.ts: 704ms, application-code: 123ms)
+ GET /leaderboard 200 in 843ms (next.js: 38ms, proxy.ts: 769ms, application-code: 37ms)
+ GET /admin/round1 200 in 840ms (next.js: 36ms, proxy.ts: 706ms, application-code: 98ms)
+ GET /leaderboard 200 in 1037ms (next.js: 5ms, proxy.ts: 995ms, application-code: 37ms)
+ GET /oc 200 in 1284ms (next.js: 12ms, proxy.ts: 1240ms, application-code: 32ms)
+ GET /admin/round1 200 in 1295ms (next.js: 5ms, proxy.ts: 1203ms, application-code: 87ms)

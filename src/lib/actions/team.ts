@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getViewer } from "@/lib/auth"
-import { getEventTiming, deadlinePassed } from "@/lib/settings"
+import { getEventTiming, getEventFlags, rollIsOpen, deadlinePassed } from "@/lib/settings"
 import { deckFileError, deckMagicError, sanitizeFileName } from "@/lib/validate"
 
 export interface SubmitState {
@@ -19,9 +19,9 @@ export async function rollProblemStatementAction(): Promise<{ ok: boolean; error
   const viewer = await getViewer()
   if (!viewer || viewer.role !== "team" || !viewer.team) return { ok: false, error: "Not signed in as a team." }
 
-  const timing = await getEventTiming()
-  if (timing.ps_release_at && new Date(timing.ps_release_at).getTime() > Date.now()) {
-    return { ok: false, error: "Problem statements are not released yet." }
+  const [timing, flags] = await Promise.all([getEventTiming(), getEventFlags()])
+  if (!rollIsOpen(flags, timing)) {
+    return { ok: false, error: "The roll is not open yet. The organizers will open it at the event." }
   }
   if (viewer.team.problem_statement_id) return { ok: true }
 
@@ -45,9 +45,6 @@ export async function submitRound1Action(_prev: SubmitState, formData: FormData)
   if (!viewer || viewer.role !== "team" || !viewer.team) return { error: "Not signed in as a team." }
   const team = viewer.team
 
-  if (!["registered", "round1"].includes(team.status)) {
-    return { error: `Your team status is "${team.status}" — Round 1 submission is closed for you.` }
-  }
   const timing = await getEventTiming()
   if (deadlinePassed(timing.round1_deadline)) {
     return { error: "The Round 1 deadline has passed. Submissions are closed." }
@@ -103,10 +100,10 @@ export async function submitFinalAction(_prev: SubmitState, formData: FormData):
   if (!viewer || viewer.role !== "team" || !viewer.team) return { error: "Not signed in as a team." }
   const team = viewer.team
 
-  if (!["advanced", "finalist"].includes(team.status)) {
-    return { error: "Only shortlisted teams can submit for the final round." }
+  const [timing, flags] = await Promise.all([getEventTiming(), getEventFlags()])
+  if (!flags.finalOpen) {
+    return { error: "Final round submissions are not open yet. The organizers will open them at the event." }
   }
-  const timing = await getEventTiming()
   if (deadlinePassed(timing.final_deadline)) {
     return { error: "The final round deadline has passed. Submissions are closed." }
   }

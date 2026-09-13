@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 import { requireAdminPage } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { Card, EmptyState, SectionHeading, StatCard } from "@/components/ui"
+import { Card, EmptyState, LinkButton, SectionHeading, StatCard } from "@/components/ui"
 import { TeamRow } from "./team-row"
 
 export const dynamic = "force-dynamic"
@@ -29,7 +30,7 @@ export default async function AdminTeamsPage() {
       <SectionHeading
         kicker="REGISTRY"
         title="Teams"
-        description="Every squad at Epoch — codes, squads, logins, and status. Reset passwords and prune dead registrations here."
+        description="Every squad at Epoch. Change the leader's email on the spot (✎), reset passwords, or add walk-in teams manually."
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -38,17 +39,26 @@ export default async function AdminTeamsPage() {
         <StatCard label="With logins" value={String(withLogin)} sub="Auth accounts linked" />
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <LinkButton href="/admin/teams/add" size="sm">
+          + Add team manually
+        </LinkButton>
+        <LinkButton href="/admin/teams/import" variant="secondary" size="sm">
+          Import CSV
+        </LinkButton>
+      </div>
+
       {rows.length === 0 ? (
-        <EmptyState icon="◇" title="No teams yet" description="Import the registration CSV to create team logins." />
+        <EmptyState icon="◇" title="No teams yet" description="Import the registration CSV or add a team manually." />
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[64rem] text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-800/70">
+                <tr className="border-b border-white/[0.08]">
                   <th className="hud-label px-4 py-3">CODE</th>
                   <th className="hud-label px-4 py-3">TEAM</th>
-                  <th className="hud-label px-4 py-3">LEADER</th>
+                  <th className="hud-label px-4 py-3">LEADER (✎ = EDIT EMAIL)</th>
                   <th className="hud-label px-4 py-3">MEMBERS</th>
                   <th className="hud-label px-4 py-3">PS</th>
                   <th className="hud-label px-4 py-3">STATUS</th>
@@ -56,7 +66,7 @@ export default async function AdminTeamsPage() {
                   <th className="hud-label px-4 py-3">ACTIONS</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/50">
+              <tbody className="divide-y divide-white/[0.05]">
                 {rows.map((team) => (
                   <TeamRow
                     key={team.id}

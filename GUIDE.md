@@ -92,7 +92,7 @@ Supabase (the database + more)
 ## 4. Admin flow (chronological runbook)
 
 ### Before the event (T-minus days)
-1. **Set the clocks** — `/admin/settings`: event start, PS release time, Round 1 deadline, Final deadline.
+1. **Set the clocks (optional)** — `/admin/settings`: event start (landing countdown), Round 1 deadline, Final deadline. **If you leave a deadline empty, that round simply never auto-closes** — everything stays usable.
 2. **Load the problem pool** — `/admin/problem-statements`. Set `max_teams` per PS (e.g. 20 PSs × 5 teams each = 100 capacity). Total capacity must be ≥ team count.
 3. **Import teams** — `/admin/teams/import`:
    - Export the registration Excel as **CSV UTF-8** (File → Save As → CSV).
@@ -101,22 +101,23 @@ Supabase (the database + more)
    - For each team, **pick the leader** (default = first member with a valid email). The leader's email becomes the login.
    - Teams with duplicate emails or no valid email get flagged — uncheck or fix them.
    - Confirm → accounts are created → **download the credentials CSV** (team, email, password) and share with leaders.
+4. **Walk-in teams** — `/admin/teams/add`: add a team + members manually on the spot; a password is generated and shown once.
 
-### Day 1 — speaker session + Round 1
-4. At the announced moment, the Roll button unlocks automatically (from `ps_release_at`). Nothing to click.
-5. Teams roll and build. Watch `/admin` for live roll/submission counts.
-6. Send **notices** (`/admin/notices`) for anything urgent — they appear on every team dashboard instantly.
-7. As decks come in, review them at `/admin/round1` (download links are signed, expire in 5 min).
+### Day 1 — the two big switches
+5. **Open the roll** — on `/admin` (Overview) flip **🎲 Open roll** when you want teams to be able to roll. Until you flip it, teams see a "waiting for the organizers" screen — the dice do NOT work. (You can also set a scheduled release time in Settings, which auto-opens it.)
+6. Teams roll and build. Watch `/admin` for live roll/submission counts.
+7. **Change leader on the spot** — on `/admin/teams` click ✎ next to a leader's email, type the real leader's email (they told you in person), save. Their password stays the same — hand it to them.
+8. Send **notices** (`/admin/notices`) for anything urgent — they appear on every team dashboard instantly.
+9. As decks come in, review them at `/admin/round1` (download links are signed, expire in 5 min).
 
 ### After Round 1 closes — judging
-8. Judges score via their Google Form (external, as always).
-9. Enter totals at `/admin/scoring` — either type into the grid, or **Import scores from CSV** (`team_code,score,notes` — paste the form summary, unknown team codes are rejected and listed).
-10. **Publish** the round → `/leaderboard` goes live instantly. (Scores are now **database-locked** until you unpublish — nobody, not even the service key, can silently edit a live leaderboard.)
-11. Shortlist teams at `/admin/round1` (Advance / Eliminate) — advanced teams see the final-round submit page unlock on their dashboards.
+10. Judges score via their Google Form (external, as always).
+11. Enter totals at `/admin/scoring` — either type into the grid, or **Import scores from CSV** (`team_code,score,notes` — paste the form summary, unknown team codes are rejected and listed).
+12. **Publish** the round → `/leaderboard` goes live instantly. (Scores are now **database-locked** until you unpublish — nobody, not even the service key, can silently edit a live leaderboard.)
 
 ### Day 2 — final round
-12. Shortlisted teams submit GitHub repos (auto-gated by status + deadline).
-13. Judges score again → `/admin/scoring?round=final` → Publish.
+13. Flip **🏁 Open final submissions** (on `/admin` Overview or the Final page) when you want teams to submit repos. **Every team can submit — no shortlisting, no advance/eliminate.** The final deadline (if set) still applies.
+14. Judges score again → `/admin/scoring?round=final` → Publish.
 
 ### Closing + post-event
 14. `/admin/announce-winners` — build the podium, Save & Publish.

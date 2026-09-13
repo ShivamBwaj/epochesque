@@ -2,7 +2,9 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { requireAdminPage } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getEventTiming, deadlinePassed } from "@/lib/settings"
+import { getEventTiming, getEventFlags, rollIsOpen, deadlinePassed } from "@/lib/settings"
+import { setRollOpenAction, setFinalOpenAction } from "@/lib/actions/admin"
+import { SubmitButton } from "@/components/submit-button"
 import { Badge, Card, EmptyState, SectionHeading, StatCard } from "@/components/ui"
 
 export const dynamic = "force-dynamic"
@@ -18,7 +20,7 @@ function fmt(iso: string | null) {
 export default async function AdminOverviewPage() {
   await requireAdminPage()
   const admin = createAdminClient()
-  const timing = await getEventTiming()
+  const [timing, flags] = await Promise.all([getEventTiming(), getEventFlags()])
 
   const [teams, ps, subs, lv, audit] = await Promise.all([
     admin.from("teams").select("status, problem_statement_id"),
@@ -45,9 +47,8 @@ export default async function AdminOverviewPage() {
 
   const gates = [
     { label: "Event start", value: timing.event_start, note: "Landing countdown" },
-    { label: "PS release", value: timing.ps_release_at, note: deadlinePassed(timing.ps_release_at) ? "Roll is OPEN" : "Roll is gated" },
-    { label: "Round 1 deadline", value: timing.round1_deadline, note: deadlinePassed(timing.round1_deadline) ? "CLOSED" : "Open" },
-    { label: "Final deadline", value: timing.final_deadline, note: deadlinePassed(timing.final_deadline) ? "CLOSED" : "Open" },
+    { label: "Round 1 deadline", value: timing.round1_deadline, note: deadlinePassed(timing.round1_deadline) ? "CLOSED" : timing.round1_deadline ? "Open" : "No deadline set" },
+    { label: "Final deadline", value: timing.final_deadline, note: deadlinePassed(timing.final_deadline) ? "CLOSED" : timing.final_deadline ? "Open" : "No deadline set" },
   ]
 
   return (
@@ -55,14 +56,75 @@ export default async function AdminOverviewPage() {
       <SectionHeading
         kicker="MISSION CONTROL"
         title="Overview"
-        description="Live state of the event — teams, rolls, submissions, and the last admin actions."
+        description="Live state of the event — the two big switches, teams, rolls, submissions, and the last admin actions."
       />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className={`p-5 ${rollIsOpen(flags, timing) ? "ring-glow" : ""}`}>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="hud-label">🎲 THE ROLL</p>
+              <div className="mt-2 flex items-center gap-2">
+                {rollIsOpen(flags, timing) ? (
+                  <Badge tone="green">open — teams can roll</Badge>
+                ) : (
+                  <Badge tone="slate">closed</Badge>
+                )}
+                {timing.ps_release_at && !flags.rollOpen ? (
+                  <span className="text-[11px] text-muted/70">auto-opens {fmt(timing.ps_release_at)}</span>
+                ) : null}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Nothing unlocks for teams until you flip this — or set a release time in Settings.
+              </p>
+            </div>
+            <form action={setRollOpenAction}>
+              <input type="hidden" name="open" value={rollIsOpen(flags, timing) ? "false" : "true"} />
+              <SubmitButton
+                variant={rollIsOpen(flags, timing) ? "secondary" : "primary"}
+                confirm={rollIsOpen(flags, timing) ? "Close the roll? Teams that already rolled keep their problem." : "Open the roll for all teams?"}
+                pendingText="Working…"
+              >
+                {rollIsOpen(flags, timing) ? "Close roll" : "Open roll"}
+              </SubmitButton>
+            </form>
+          </div>
+        </Card>
+
+        <Card className={`p-5 ${flags.finalOpen ? "ring-glow" : ""}`}>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="hud-label">🏁 FINAL SUBMISSIONS</p>
+              <div className="mt-2 flex items-center gap-2">
+                {flags.finalOpen ? (
+                  <Badge tone="green">open — teams can submit repos</Badge>
+                ) : (
+                  <Badge tone="slate">closed</Badge>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Flips the repo submission page on for every team — no shortlisting needed.
+              </p>
+            </div>
+            <form action={setFinalOpenAction}>
+              <input type="hidden" name="open" value={flags.finalOpen ? "false" : "true"} />
+              <SubmitButton
+                variant={flags.finalOpen ? "secondary" : "primary"}
+                confirm={flags.finalOpen ? "Close final submissions?" : "Open final submissions for ALL teams?"}
+                pendingText="Working…"
+              >
+                {flags.finalOpen ? "Close" : "Open final"}
+              </SubmitButton>
+            </form>
+          </div>
+        </Card>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Teams" value={String(teamRows.length)} sub={`${byStatus.registered} registered · ${byStatus.round1} in round 1`} />
         <StatCard label="PS capacity" value={`${taken}/${capacity}`} sub={`${capacity - taken} slots free`} />
-        <StatCard label="Round 1 decks" value={String(r1Subs)} sub={`${byStatus.advanced + byStatus.finalist} shortlisted`} />
-        <StatCard label="Final repos" value={String(finalSubs)} sub={`${byStatus.finalist} finalists`} />
+        <StatCard label="Round 1 decks" value={String(r1Subs)} sub="Submitted" />
+        <StatCard label="Final repos" value={String(finalSubs)} sub="Submitted" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

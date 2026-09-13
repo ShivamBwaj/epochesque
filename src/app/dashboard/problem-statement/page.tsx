@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { requireTeamPage } from "@/lib/auth"
-import { getEventTiming, deadlinePassed } from "@/lib/settings"
+import { getEventTiming, getEventFlags, rollIsOpen } from "@/lib/settings"
 import { createClient } from "@/lib/supabase/server"
 import { Alert, Badge, Card, Prose, SectionHeading } from "@/components/ui"
 import { Countdown } from "@/components/countdown"
@@ -18,7 +18,7 @@ function fmt(iso: string | null) {
 
 export default async function ProblemStatementPage() {
   const { team } = await requireTeamPage()
-  const timing = await getEventTiming()
+  const [timing, flags] = await Promise.all([getEventTiming(), getEventFlags()])
 
   if (team.problem_statement_id) {
     const supabase = await createClient()
@@ -41,13 +41,13 @@ export default async function ProblemStatementPage() {
               <Badge tone="cyan">{ps.code}</Badge>
               <Badge tone="green">LOCKED</Badge>
             </div>
-            <h3 className="mt-4 text-xl font-bold tracking-tight text-slate-100 md:text-2xl">{ps.title}</h3>
+            <h3 className="mt-4 text-xl font-semibold tracking-tight text-foreground md:text-2xl">{ps.title}</h3>
             <div className="mt-4">
               <Prose>
                 <p className="whitespace-pre-line">{ps.description}</p>
               </Prose>
             </div>
-            <p className="mt-6 font-mono text-xs tracking-widest text-slate-500">
+            <p className="mt-6 font-mono text-xs tracking-widest text-muted/60">
               LOCKED IN AT {fmt(team.ps_locked_at).toUpperCase()}
             </p>
           </Card>
@@ -62,25 +62,35 @@ export default async function ProblemStatementPage() {
     )
   }
 
-  const released = timing.ps_release_at ? deadlinePassed(timing.ps_release_at) : true
-
-  if (!released) {
+  if (!rollIsOpen(flags, timing)) {
+    const scheduledSoon = timing.ps_release_at && !flags.rollOpen
     return (
       <div className="space-y-6">
         <SectionHeading
           kicker="THE ROLL"
           title="Problem Statement"
-          description="Problem statements drop soon. Warm up your ideas — the dice wait for no one."
+          description="The dice are loaded. The organizers open the roll at the event — hang tight."
         />
         <Card className="mx-auto max-w-xl p-8 text-center md:p-10">
-          <p className="hud-label">PROBLEM STATEMENTS UNLOCK IN</p>
-          <Countdown target={timing.ps_release_at} className="mt-6 flex flex-col items-center" />
+          {scheduledSoon ? (
+            <>
+              <p className="hud-label">PROBLEM STATEMENTS UNLOCK IN</p>
+              <Countdown target={timing.ps_release_at} className="mt-6 flex flex-col items-center" />
+            </>
+          ) : (
+            <>
+              <span className="dice-face inline-block text-4xl">🎲</span>
+              <p className="hud-label mt-4">WAITING FOR THE ORGANIZERS</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                The roll opens the moment the OC flips the switch. Keep this page handy.
+              </p>
+            </>
+          )}
           <div className="mt-8">
-            <span className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-slate-700/60 bg-slate-900/60 px-6 py-3 text-base font-medium text-slate-600">
+            <span className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.02] px-6 py-3 text-base font-medium text-muted/50">
               🎲 Roll the dice
             </span>
           </div>
-          <p className="mt-3 text-xs text-slate-500">Come back when the clock hits zero.</p>
         </Card>
       </div>
     )
