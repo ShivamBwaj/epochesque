@@ -616,12 +616,12 @@ export async function saveSettingsAction(_prev: ActionResult, formData: FormData
   if (!user) return { ok: false, error: "Admins only." }
 
   const keys = ["event_start", "ps_release_at", "round1_deadline", "final_deadline", "event_end"]
-  const rows: { key: string; value: string | null }[] = []
+  const rows: { key: string; value: string }[] = []
 
   for (const k of keys) {
     const raw = String(formData.get(k) ?? "").trim()
     if (!raw) {
-      rows.push({ key: k, value: null })
+      rows.push({ key: k, value: "" })
       continue
     }
     const d = new Date(raw)
