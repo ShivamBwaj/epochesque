@@ -175,3 +175,4 @@ Auth (rate-limited login, team/admin roles), CSV team import wizard (Team Id gro
 - DB via pooler `aws-0-ap-southeast-2.pooler.supabase.com` (direct host is IPv6-only locally); MCP supabase-remote is read-only → DDL via `npm run db:migrate:file supabase/migrations/FILE.sql`
 - e2e seeds `E2E-*` rows + cleans up (incl. audit rows since run start); real data fixture at tests/fixtures/real-registration.csv is gitignored (PII)
 - Trench UI source: `C:\Users\Loq\Documents\CRAP\Trench\landing-site` (components/landing, aurora, reveal, rotating-words, stats patterns)
+
