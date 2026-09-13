@@ -6,6 +6,17 @@ Dark, glassy, aurora-animated UI · roll-the-dice mechanic · zero setup for par
 
 ---
 
+## 0. Quick start for organizers (read this first)
+
+- **Site:** https://epochesque.vercel.app · **Admin login:** the admin account (see `.env.local` / password vault — `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`)
+- **Who does what, in one breath:** Settings (clocks) → Problems (the pool) → People (speakers + OC) → Import teams (CSV) → hand out credentials → at the event: **Open roll** → teams roll + upload decks → **Scoring** → **Publish** → **Open final** → repos in → score → publish → **Winners** → **Gallery**.
+- **The two big switches** on `/admin` (Open roll / Open final) start CLOSED. Nothing works for teams until you flip them.
+- **Scores are law:** once a leaderboard is published, the database itself refuses score edits. Unpublish → edit → republish. Never silently edit a live board.
+- **Uploads:** teams upload decks straight to Supabase storage (up to 25 MB); you download them from `/admin/round1` via links that expire in 5 minutes.
+- **If something looks wrong:** `/admin/audit` shows every admin action ever taken, with timestamps.
+
+---
+
 ## 1. Is there a backend? (Architecture)
 
 **Yes — but you don't run a separate backend server.** The backend is two pieces that talk to each other:
@@ -65,9 +76,9 @@ Supabase (the database + more)
 | `/admin/teams` | Every team: code, members, login email, PS, status. Change the leader from the member dropdown, reset password (shows once, copy it), delete team |
 | `/admin/teams/import` | **CSV import wizard** (details below) |
 | `/admin/problem-statements` | Add/edit the problem pool. Each PS has a `max_teams` capacity — how many teams the dice can assign it |
-| `/admin/people` | Speakers + OC members: name, role, tagline, tags, order, visible/hidden — publishes straight to `/speakers` and `/oc` |
-| `/admin/round1` | All Round 1 decks — download via expiring links, Advance/Eliminate/Revert teams |
-| `/admin/final` | Shortlisted teams' GitHub links, mark finalists/winners |
+| `/admin/people` | Speakers + OC members: name, photo (circular pfp), role, tagline, tags, order, visible/hidden — publishes straight to `/speakers` and `/oc` |
+| `/admin/round1` | All Round 1 decks — download via expiring links (5 min). Scoring lives under Scoring |
+| `/admin/final` | Every team's GitHub repo links. Open/close final submissions with the switch |
 | `/admin/scoring` | The judging sheet — type scores in the grid **or** import the judges' Google-Form CSV. Publish/Unpublish toggle per round |
 | `/admin/announce-winners` | Podium builder — positions, team codes, prizes. Draft → Publish |
 | `/admin/notices` | Broadcast short announcements to every team dashboard (e.g. "deadline extended 30 min") |
@@ -156,23 +167,18 @@ E2E tests seed their own `E2E-*` data and clean up after themselves — safe to 
 
 ---
 
-## 7. Deploy (Vercel)
+## 7. Deploy — LIVE (already done)
 
-```bash
-git push        # to GitHub
-```
-Then on Vercel: New Project → import repo → add environment variables:
+**Production URL: https://epochesque.vercel.app**
+**Repo: https://github.com/ShivamBwaj/epochesque (private)**
 
-| Var | Value |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | from `.env.local` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | from `.env.local` |
-| `SUPABASE_SERVICE_ROLE_KEY` | from `.env.local` (secret — never commit) |
-| `NEXT_PUBLIC_SITE_URL` | your final domain (for sitemap/OG) |
+The site is deployed and connected to the repo — every `git push` to `master` auto-deploys to production. Env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) are already set in Vercel for Production + Preview.
 
-Also flip on **Leaked password protection** in Supabase → Authentication → Settings.
+**Important platform notes (learned the hard way):**
 
-DB migrations: `npm run db:migrate` (applies `supabase/migrations/` via the pooler `DATABASE_URL`).
+- **Vercel caps function request bodies at ~4.5MB.** That's why ALL file uploads (Round 1 decks, People photos, Gallery images) go **directly from the browser to Supabase Storage** via short-lived signed upload URLs — the file never passes through the server. The server only issues the signed URL and verifies the file (magic bytes, size, path) when the team confirms.
+- Still to do (one-time, in Supabase dashboard): enable **Leaked password protection** in Authentication → Settings, and set `NEXT_PUBLIC_SITE_URL` in Vercel to the final domain if you add a custom one.
+- DB migrations: `npm run db:migrate` applies everything in order; `node scripts/apply-migration.mjs supabase/migrations/FILE.sql` applies one. All 9 migrations are already applied to the live DB.
 
 ---
 

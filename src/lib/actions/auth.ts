@@ -30,8 +30,8 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 
   const hdrs = await headers()
   const ip = (hdrs.get("x-forwarded-for") ?? "local").split(",")[0].trim()
-  if (rateLimited(`ip:${ip}`, 20, 15 * 60_000)) return { error: "Too many attempts. Try again in 15 minutes." }
-  if (rateLimited(`email:${email}`, 5, 15 * 60_000)) return { error: "Too many attempts for this email. Try again in 15 minutes." }
+  if (rateLimited(`ip:${ip}`, 60, 15 * 60_000)) return { error: "Too many attempts. Try again in 15 minutes." }
+  if (rateLimited(`email:${email}`, 15, 15 * 60_000)) return { error: "Too many attempts for this email. Try again in 15 minutes." }
 
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })

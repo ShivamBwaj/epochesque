@@ -2,7 +2,20 @@
 
 Source of truth for ongoing work. Update this file as things get done or new issues appear.
 
-## Status: ✅ v4 COMPLETE — upload fault fixed for good, leader dropdown, tables fit, People tab, rename
+## Status: ✅ v5 — DEPLOYED TO PRODUCTION + FULLY VERIFIED
+
+**Production:** https://epochesque.vercel.app · **Repo:** github.com/ShivamBwaj/epochesque (private, push-to-deploy)
+**DB:** live Supabase (all 9 migrations applied). DB left PRISTINE at handover: 0 teams / 0 PS / 0 scores / clean audit, admin account only.
+
+## v5 — production deploy + deep verification pass
+- [x] GitHub repo + Vercel project + env vars (prod & preview) + push-to-deploy
+- [x] **REAL BUG: Vercel ~4.5MB function body cap killed big uploads on prod** (worked locally, failed silently on Vercel). Rewrote ALL uploads (round1 decks, people photos, gallery) to browser→Supabase direct via signed upload URLs; server issues the URL, then verifies magic bytes + path + size on confirm. 12MB deck verified end-to-end on prod (upload, DB row, admin download = full 12MB).
+- [x] **REAL BUG: deleting a team leaked a PS slot** — added `decrement_ps_taken()` RPC (migration 0009); deleteTeamAction calls it.
+- [x] **REAL BUG: leader switch between existing members corrupted the members array** (email rewrite created duplicates). Fixed; only rewrites when the new email isn't already a member.
+- [x] **REAL BUG: score input `step="0.5"` silently blocked quarter-point scores** (87.25 etc.) at the browser level — no error, no submit. Changed to `step="0.01"` (backend always accepted 2 decimals).
+- [x] e2e seeds now deactivate real PS during runs (hermetic rolls next to real data); restore on cleanup.
+- [x] Full prod verification: Phase A admin setup+import 11/11 · Phase B team journey 18/18 (incl. roll gate closed/open, PS lock, 12MB upload, final gate) · Phase C admin deep pass 18/18 (leader dropdown change+restore, pw reset, manual walk-in add+login+delete, people+photos public render, deck download) · Phase D scoring/publish/lock/CSV/winners/notices/settings/audit — all green.
+- [x] Security probe extended to 19 checks (people table + 7 event_settings keys) — all pass.
 
 ## v4 changes (user feedback round)
 - [x] **FIX: SYSTEM FAULT on PPT uploads >10MB** (ref 3346774915) — root cause: Next.js 16 `proxy.ts` buffers request bodies with a **10MB default cap** (`experimental.proxyClientMaxBodySize`); bodies past that got truncated → "Unexpected end of form" → error boundary. v3 only raised the Server Action limit (30MB), not the proxy buffer. Now `proxyClientMaxBodySize: "35mb"` in next.config.ts. **Verified live: a 12MB PPTX uploads successfully.** Dev server restart required (done).
