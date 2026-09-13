@@ -61,3 +61,6 @@ vercel-login.log
 
 *.tmp.mjs
 score-fail.png
+
+dev-server.log
+public/aman.jpeg

@@ -1,8 +1,10 @@
 # EPOCHESQUE — Event Website
 
-Two-day hackathon site with a Trench-style aurora UI: teams log in, roll a locked problem statement, submit Round 1 PPTs, admins score (grid or CSV import) and publish leaderboards, finalists submit GitHub repos, winners get announced, notices broadcast to dashboards, every admin action is audit-logged.
+Two-day hackathon site with a Trench-style aurora UI: teams log in, roll a locked problem statement (CS2 case-opening reel), submit Round 1 PPTs, admins take live attendance (Day 1/Day 2 with Google Sheet mirror), teams book gaming slots (Tekken/FIFA, atomic), admins score concurrently from multiple panels (dirty-row saves) and publish leaderboards, finalists submit GitHub repos, winners get announced, notices broadcast to dashboards, every admin action is audit-logged.
 
 **➡️ Full guide (architecture, admin runbook, team flow, security, deploy): [GUIDE.md](./GUIDE.md)**
+
+**Attendance → Google Sheet backup setup: [docs/attendance-google-sheet.md](./docs/attendance-google-sheet.md)**
 
 **Stack:** Next.js 16 (App Router, TS, Tailwind v4, framer-motion) · Supabase (Postgres + Auth + Storage) · Vercel-ready.
 
@@ -25,6 +27,7 @@ npm run dev
 | `SUPABASE_SERVICE_ROLE_KEY` | **SECRET** — server-only, never expose |
 | `DATABASE_URL` | Postgres pooler URI (migrations only) |
 | `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` | Admin credentials (seed + tests) |
+| `ATTENDANCE_SHEETS_WEBHOOK_URL` | Optional — Apps Script webhook URL for the attendance Google Sheet mirror |
 | `NEXT_PUBLIC_SITE_URL` | Optional — canonical URL for sitemap/SEO |
 
 ## Admin guide

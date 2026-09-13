@@ -6,6 +6,7 @@ import { deletePersonAction, upsertPersonAction, beginPersonPhotoUploadAction } 
 import type { ActionResult } from "@/lib/actions/admin"
 import { SubmitButton } from "@/components/submit-button"
 import { Alert, Badge, Button, Card, EmptyState, Input, Label, Textarea } from "@/components/ui"
+import { PhotoCropModal } from "./photo-crop-modal"
 
 function tagsToString(tags: Person["tags"]): string {
   return Array.isArray(tags) ? tags.filter((t) => typeof t === "string").join(", ") : ""
@@ -44,7 +45,23 @@ function PersonSection({
   const [progress, setProgress] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const photoRef = useRef<HTMLInputElement>(null)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
+  const [croppedFile, setCroppedFile] = useState<File | null>(null)
   const rows = people.filter((p) => p.kind === kind)
+
+  const onPickFile = (file: File | undefined) => {
+    if (!file || !file.type.startsWith("image/")) return
+    const url = URL.createObjectURL(file)
+    setCroppedFile(null)
+    setCropSrc(url)
+    if (photoRef.current) photoRef.current.value = ""
+  }
+
+  const onCropDone = (file: File) => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc)
+    setCropSrc(null)
+    setCroppedFile(file)
+  }
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -56,7 +73,7 @@ function PersonSection({
     setProgress("Saving…")
     try {
       const fd = new FormData(form)
-      const photo = photoRef.current?.files?.[0]
+      const photo = croppedFile
       if (photo && photo.size > 0) {
         setProgress("Uploading photo…")
         const begin = await beginPersonPhotoUploadAction(photo.name, photo.size)
@@ -67,7 +84,7 @@ function PersonSection({
         const up = await fetch(begin.signedUrl, {
           method: "PUT",
           body: photo,
-          headers: { "Content-Type": photo.type || "image/jpeg" },
+          headers: { "Content-Type": photo.type || "image/webp" },
         })
         if (!up.ok) {
           setState({ ok: false, error: "Photo upload failed. Try again." })
@@ -80,6 +97,7 @@ function PersonSection({
       setState(result)
       if (result.ok) {
         if (photoRef.current) photoRef.current.value = ""
+        setCroppedFile(null)
         setEditing(null)
       }
     } catch {
@@ -190,29 +208,54 @@ function PersonSection({
             {state.ok && state.message ? <Alert tone="success">{state.message}</Alert> : null}
             {progress ? <Alert tone="info">{progress}</Alert> : null}
             <div>
-              <Label htmlFor={`${kind}-photo`}>Photo (shown as a circular pfp — optional)</Label>
+              <Label htmlFor={`${kind}-photo`}>Photo — card style, 4:5</Label>
               <div className="flex items-center gap-3">
-                {editing?.photo_path ? (
+                {croppedFile ? (
+                  <img
+                    src={URL.createObjectURL(croppedFile)}
+                    alt="Cropped preview"
+                    className="h-14 w-[3.5rem] shrink-0 rounded-lg object-cover ring-1 ring-accent/50"
+                  />
+                ) : editing?.photo_path ? (
                   <img
                     src={personPhotoUrl(editing.photo_path)}
                     alt={editing.name}
-                    className="h-14 w-14 shrink-0 rounded-full object-cover ring-1 ring-white/10"
+                    className="h-14 w-[3.5rem] shrink-0 rounded-lg object-cover ring-1 ring-white/10"
                   />
                 ) : (
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-dashed border-white/[0.12] text-xl text-muted/50">
+                  <span className="flex h-14 w-[3.5rem] shrink-0 items-center justify-center rounded-lg border border-dashed border-white/[0.12] text-xl text-muted/50">
                     ◇
                   </span>
                 )}
-                <input
-                  id={`${kind}-photo`}
-                  ref={photoRef}
-                  type="file"
-                  accept="image/*"
-                  disabled={busy}
-                  className={fileInputClass}
-                />
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <input
+                    id={`${kind}-photo`}
+                    ref={photoRef}
+                    type="file"
+                    accept="image/*"
+                    disabled={busy}
+                    onChange={(e) => onPickFile(e.target.files?.[0])}
+                    className={fileInputClass}
+                  />
+                  {croppedFile ? (
+                    <button
+                      type="button"
+                      onClick={() => setCroppedFile(null)}
+                      className="w-fit font-mono text-[11px] text-muted underline-offset-2 hover:text-foreground hover:underline"
+                    >
+                      ✕ remove picked crop
+                    </button>
+                  ) : editing?.photo_path ? (
+                    <label className="flex w-fit cursor-pointer items-center gap-1.5 font-mono text-[11px] text-muted-foreground hover:text-foreground">
+                      <input type="checkbox" name="remove_photo" disabled={busy} className="h-3.5 w-3.5 accent-red-500" />
+                      remove existing photo (card falls back to initials)
+                    </label>
+                  ) : null}
+                </div>
               </div>
-              <p className="mt-1.5 text-[11px] text-muted/70">.jpg / .png / .webp, max 5 MB. Uploading replaces the current photo.</p>
+              <p className="mt-1.5 text-[11px] text-muted/70">
+                Pick any photo → crop it to the card ratio (zoom + drag) → it uploads as the final card photo. .jpg / .png / .webp, max 5 MB.
+              </p>
             </div>
             <div>
               <Label htmlFor={`${kind}-name`}>Name</Label>
@@ -270,6 +313,17 @@ function PersonSection({
           </form>
         </Card>
       </div>
+
+      {cropSrc ? (
+        <PhotoCropModal
+          src={cropSrc}
+          onCancel={() => {
+            URL.revokeObjectURL(cropSrc)
+            setCropSrc(null)
+          }}
+          onDone={onCropDone}
+        />
+      ) : null}
     </section>
   )
 }

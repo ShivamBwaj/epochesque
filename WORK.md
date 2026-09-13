@@ -2,7 +2,65 @@
 
 Source of truth for ongoing work. Update this file as things get done or new issues appear.
 
-## Status: ✅ v6 — LIVE, branded (HackClub), hero redesigned
+## Status: ✅ v9 — board-style people cards + pristine handover + Netlify deploy
+
+## v9 — people cards final + cleanup + deploy
+- [x] **People cards = cyscomvit.com/our-team board style** (studied live via browser): 3/4 aspect photo cards, grayscale(20%) → full color on hover, image zoom 110%, card lift (-translate-y-2), per-person accent color (12-color cycle on role text + hover border/glow), bottom gradient overlay with name + role, tagline fades in on hover. Site headings/copy untouched (SectionHeading as before). Speaker with 1 entry = feature card + tags.
+- [x] **Photo pipeline (manual, no runtime AI)**: `/admin/people` upload → react-easy-crop modal locked 3:4 card ratio (zoom + drag) → webp export → signed-URL upload + magic-byte verify. **Edit existing people**: name/role/tagline/order changes, photo replace (new crop), photo removal (new `remove_photo` flag → deletes file, card falls back to initials).
+- [x] **DB wiped pristine for the event**: submissions (incl. storage), scores, attendance marks, game bookings, test people (2 Shivams) — all pre-event testing junk. Kept: 23 real teams, 3 PS, Aman's card (3:4 webp), audit roll history, event_start clock, gates closed.
+- [x] `scripts/process-person.mjs` (remove.bg one-time cutout tool, key in .env.local) + `scripts/pristine-handover.mjs` (the cleanup above, re-runnable).
+- [x] Netlify migration: `netlify.toml` + `docs/deploy-netlify.md` (college wifi blocks vercel.app; uploads bypass the host so nothing else changes).
+
+## v8.5 — OC / speakers card redesign + photo pipeline
+- [x] **PersonCard (TiltedCard port)** on `/oc` + `/speakers`: 3D tilt on hover (framer-motion springs), scale 1.06, photos stay FULL COLOR (no grayscale, no bg removal), name + role on a gradient scrim at the bottom (translateZ depth), **12 rotating gradient color themes per card** so a full OC grid shows variety (indigo/rose/emerald/violet/amber/sky/teal/pink/orange/blue/lime/fuchsia rings). No-photo fallback = initials on the person's gradient. Speaker with exactly 1 entry renders as a big feature card + tagline + tags; more = grid.
+- [x] **Manual crop upload in `/admin/people`**: pick any photo → crop modal (react-easy-crop) with **locked 4:5 card ratio**, zoom slider + drag → "Use this crop" exports webp via canvas → uploads through the existing signed-URL + magic-byte verified flow. Replaces the old circular-pfp input.
+- [x] Aman added to `/oc` with his original photo, auto-cropped 4:5 cover (117 KB webp) — visible now on the dev server.
+- [x] One-time `scripts/process-person.mjs` (remove.bg API + sharp 4:5 + upload + upsert) kept for optional cutout style; key in `.env.local` (`REMOVE_BG_API_KEY`), never deploys.
+- [x] Cleanup: imgly packages removed (0 vulnerabilities), ProfileCard experiment deleted, typecheck 0 errors, lint 0 errors (3 benign `<img>` warnings), /oc + /speakers + /admin/people verified live.
+
+## v8.4 — scoring weights + round rename
+- [x] **Final leaderboard re-weighted** (migration 0016, applied to live DB): `leaderboard_final_public` = **20% OC Round 1 (PPT) + 10% Quiz + 70% Senior Final Evaluation** (was 15/15/70). Verified in DB: 100/100/100 → 100.00 · only-OC → 20.00 · only-Quiz → 10.00 · only-Final → 70.00. Missing rounds still count 0.
+- [x] **Renamed round everywhere user-facing**: "PPT Round" → **OC Round 1** (scoring tabs, decks page, admin nav, overview stat, settings clock, leaderboard board, dashboard labels, deadline/submission messages). Final round relabeled **Senior Final** in scoring + "Senior Final Evaluation — Weighted Score" on the leaderboard. Kept "PPT" only where it means the file itself ("Submit PPT deck", "PPT submission received" — e2e assertion untouched).
+- [x] Typecheck 0, lint clean on all touched files, all pages render (307 login gates as expected).
+
+## v8.3 — roll stage scrollbar fix
+- [x] **Scrollbar on the roll stage killed**: the fixed overlay sits on top of the admin page, which is taller than the viewport → the document scrolled underneath and the OS scrollbar strip showed at the screen edge. RollStage now locks `html`/`body` overflow while mounted (restored on exit). No other changes — the spin stays as-is.
+
+## v8.2 — reel spin rebuilt (simple)
+- [x] **REAL BUG: `SPIN_DISTANCE` was used but never defined** — the decel phase threw a ReferenceError every spin, leaving the reel stuck in the fast loop / frozen mid-spin ("weird, insanely fast, inconsistent, sometimes off"). Root cause of the mess.
+- [x] **Spin logic replaced with ONE simple rAF state machine** (killed the 3-effect drift/handoff/tween juggling): slow drift (90px/s) → smooth 0.85s ramp → cruise at 1600px/s (fast, exciting, still readable — was ~2300 before = dizzy) → power ease-out decel onto the winner with **exact velocity-continuous handoff** (k solved from cruise speed).
+- [x] **Synced to the audio**: total spin targets 5.0s = roll.mp3 length; reveal chime fires right as the roll sound ends. If the server is slow, cruise simply holds until the result arrives (decel starts the moment it does, min 1.5s).
+- [x] Deterministic landing math unchanged (starts from a position congruent mod pool-cycle → invisible jump, lands exactly on the winner under the gold marker). Watchdog (15s) + clean error recovery back to idle. Wrap normalization kept (no more running past the strip).
+- [x] Verified: typecheck 0, lint 0 errors, unit 19/19, e2e "team journey: admin rolls on stage" PASS (44s, real DB, seeds + cleans its own data).
+- [x] **Netlify migration prep** (`docs/deploy-netlify.md` + `netlify.toml`): college wifi blocks vercel.app. Nothing code-side changes (uploads already go browser→Supabase directly); guide covers import-from-GitHub, the 4 env vars, and the transition plan.
+
+## v8.1 — reel polish round
+- [x] **Reel rebuilt to match case.oki.gg**: spaced cards (12px gap), full-width viewport, edge fade mask, gold marker line, motion blur via velocity, spaced rounded cards (no borders-in-queue look).
+- [x] ~~Spin starts at full speed~~ (replaced in v8.2 — was the source of the speed bugs).
+- [x] **Wrap bug fixed**: the fast loop now wraps x back exactly one pool cycle (strip is periodic → invisible), normalized into a safe band so the viewport can never run past the strip end (this was the "goes black" glitch).
+- [x] **Sound sync**: roll.mp3 (with embedded ticks) starts on click; reveal chime (1 of 4) on land; mute toggle; WebAudio synth fallback if files missing.
+- [x] **GhostFibers background** (React Bits, ogl) behind the roll stage — original blue palette, dimmed to 60% + dark overlay; sidebar/reel/cards all layered above (z-0 bg / z-10+ content); reel has its own dark translucent backing so cards read clearly.
+- [x] **"Case" wording removed everywhere** → ROLL IT !! button, "the roll has spoken", landing copy updated; fixed-overlay Roll Stage with retractable team sidebar (‹‹ / ››), no auto-advance (operator picks next team).
+- [x] Full suite green after the refactor: 13/13 e2e, 19/19 unit, probe all denied.
+
+## v8 — projector roll + judging restructure
+- [x] **Roll moved to admin side** (`/admin/roll`, migration 0014): the OC calls each team up and rolls the CS2 case on the projector — team picker sidebar (rolled/waiting badges, search, auto-advance to next team after landing), huge projector-sized reel. Atomic admin-only RPC `roll_problem_statement_for()` (checks admins table inside; equal distribution preserved). Team's PS page is now view-only with 5s auto-refresh ("WAITING FOR YOUR TURN ON STAGE") — updates the instant the stage roll lands. Every stage roll is audit-logged (`roll.stage`).
+- [x] **Admin nav grouped** into 5 labeled sections — Event Day (Overview, Roll Stage, Attendance, Gaming) / Teams & Problems / Judging (PPT Decks, Final Repos, Scoring, Leaderboard, Winners) / Site Content / System — no more 15-item wall.
+- [x] **Quiz round added** (migration 0014): `round2` in scores + leaderboard_visibility + publish toggle + Scoring tab + leaderboard board. No submissions page (quiz masters enter scores in the grid).
+- [x] **Final leaderboard weighted 15% PPT + 15% Quiz + 70% Final** — computed in the `leaderboard_final_public` view (missing rounds = 0), so it's consistent everywhere. Verified: 100/100/100 → 100.00; 100/0/0 → 15.00.
+- [x] **Renamed everywhere**: Round 1 → PPT Round (nav, scoring, decks page, team dashboard, settings, messages); Submit R1 → Submit PPT.
+- [x] Bug fixed in flight: leaderboard views were never granted to `service_role` (only anon) — admin-client reads got permission denied. Migration 0015 grants them.
+- [x] e2e updated: team journey now = admin rolls on stage → team page locks; new weighted-leaderboard test (13/13 pass). Probe: 25 checks all denied.
+
+## v7 — event-day features
+- [x] **Attendance** (`/admin/attendance`, migration 0010): Day 1/Day 2 sub-tabs, one card per team (grouped by team code), per-member checkboxes with reg no, one-click ✓ mark-whole-team button, search (team/name/reg no), "incomplete teams only" filter, CSV download (Team, Team Name, Name, Register Number, Present/Absent) honoring filters. Optimistic UI + 2.5s polling across all open admin panels + per-team ordered write queue → crowd-check-in with zero perceptible delay.
+- [x] **Google Sheet live backup for attendance**: every tick mirrors to a Google Sheet via Apps Script webhook (pushed with `after()` — never blocks the click), plus a **⟳ Re-sync Google Sheet** button that rewrites the tab exactly from the DB. Setup: `docs/attendance-google-sheet.md` + `ATTENDANCE_SHEETS_WEBHOOK_URL` env var. DB stays the source of truth; sheet is the live mirror/backup.
+- [x] **Gaming slots** (migrations 0011+0013): Tekken + FIFA, 12 × 15-min slots each (11:00–14:00). **One team per slot, one slot per team** — both enforced atomically inside `book_game_slot()` (team-row lock + conditional claim; races impossible). Team picks at `/dashboard/gaming`; admin sees the full hierarchy + Clear button at `/admin/gaming` (audit-logged).
+- [x] **CS2 case-opening roll** (replaces dice): horizontal card reel, 6.2s ease-out spin, speed-based motion blur, per-card tick sound, predetermined winner (server resolves BEFORE the animation, reel math lands exactly on it), win pop + shine sweep + particle burst + reveal chime. Sounds pulled to `public/sounds/` (roll.mp3 = oki.gg unlock sound incl. embedded ticks; 4 reveal variants picked randomly). Reduced-motion + mute supported. Responsive card widths.
+- [x] **Equal PS distribution** (migration 0012): roll now hands out the LEAST-taken statement first (random tie-break) — 80 teams over 3 fixed statements split ~27/27/26 instead of random drift. **Bug fixed in flight:** 0012 originally regressed the 0004 OUT-param ambiguity fix (`where id` → `teams.id` vs return `id`) — caught by e2e, fixed with `as t` alias, re-applied.
+- [x] **Concurrent scoring**: scoring grid now tracks dirty rows and saves ONLY those — multiple judges' panels can score different teams simultaneously without stale-value clobbering (verified by a two-browser e2e: panel B's save no longer rewrites panel A's newer score). Save state shows unsaved-edit count.
+- [x] **Leaderboard is admin-only now**: `/leaderboard` requires admin login (redirects everyone else), removed from public nav/footer/robots, added to the admin sidebar. Publish toggles unchanged.
+- [x] Migrations 0010–0013 applied to live DB; e2e extended (attendance days, gaming book/clear/rebook, scoring concurrency, leaderboard redirect) — 12/12 pass; unit 19/19; probe 24 checks all denied.
 
 ## v6 — branding + hero
 - [x] HackClub logo = site favicon + apple-touch icon (from `public/hackclub-logo.jpg`)

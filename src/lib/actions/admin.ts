@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient } from "@/lib/supabase/server"
 import { getSessionUser, isAdmin } from "@/lib/auth"
 import type { TeamMember, WinnersEntry } from "@/lib/database.types"
+import type { RollResult } from "@/components/case-opener"
 import { genPassword } from "@/lib/csv"
 import { sanitizeFileName, imageFileError, imageMagicError } from "@/lib/validate"
 import type { User } from "@supabase/supabase-js"
@@ -73,8 +75,36 @@ async function audit(
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const ROUNDS = ["round1", "final"] as const
+const ROUNDS = ["round1", "round2", "final"] as const
 type Round = (typeof ROUNDS)[number]
+
+export async function adminRollForTeamAction(teamId: string): Promise<RollResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+
+  const admin = createAdminClient()
+  const { data: team } = await admin.from("teams").select("team_code").eq("id", teamId).maybeSingle()
+  if (!team) return { ok: false, error: "Team not found." }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc("roll_problem_statement_for", { p_team_id: teamId })
+  if (error) {
+    const msg = error.message.includes("ROLL_POOL_EMPTY")
+      ? "All problem statements are taken. Add more in Problems."
+      : error.message.includes("ROLL_NOT_ELIGIBLE")
+        ? "This team is not eligible to roll."
+        : "Could not roll. Try again."
+    return { ok: false, error: msg }
+  }
+
+  const ps = (data ?? [])[0]
+  await audit(admin, user, "roll.stage", team.team_code, { ps: ps?.code })
+  revalidatePath("/admin/roll")
+  revalidatePath("/admin")
+  revalidatePath("/dashboard/problem-statement")
+  revalidatePath("/dashboard")
+  return ps ? { ok: true, ps } : { ok: false, error: "Could not roll. Try again." }
+}
 
 export async function importTeamsConfirmAction(_prev: ImportResult, formData: FormData): Promise<ImportResult> {
   const user = await requireAdminAction()
@@ -411,11 +441,19 @@ export async function saveScoresAction(_prev: ActionResult, formData: FormData):
     return { ok: false, error: "This round's leaderboard is live. Unpublish it before editing scores — corrections must never happen behind a live leaderboard." }
   }
 
+  const dirtyIds = new Set(
+    String(formData.get("dirtyIds") ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+  )
+
   const { data: teams } = await admin.from("teams").select("id").order("team_code")
   if (!teams) return { ok: false, error: "Could not load teams." }
 
   const rows: { team_id: string; round: string; total_score: number; notes: string }[] = []
   for (const t of teams) {
+    if (dirtyIds.size > 0 && !dirtyIds.has(t.id)) continue
     const raw = String(formData.get(`score_${t.id}`) ?? "").trim()
     const notes = String(formData.get(`notes_${t.id}`) ?? "").trim().slice(0, 500)
     if (!raw) continue
@@ -426,10 +464,12 @@ export async function saveScoresAction(_prev: ActionResult, formData: FormData):
     rows.push({ team_id: t.id, round, total_score: Math.round(score * 100) / 100, notes })
   }
 
-  if (rows.length > 0) {
-    const { error } = await admin.from("scores").upsert(rows, { onConflict: "team_id,round" })
-    if (error) return { ok: false, error: error.message }
+  if (rows.length === 0) {
+    return { ok: true, message: "Nothing to save — edit a score or notes first." }
   }
+
+  const { error } = await admin.from("scores").upsert(rows, { onConflict: "team_id,round" })
+  if (error) return { ok: false, error: error.message }
   await audit(admin, user, "scores.save", round, { count: rows.length })
   revalidatePath("/admin/scoring")
   return { ok: true, message: `Saved ${rows.length} score${rows.length === 1 ? "" : "s"} for ${round}.` }
@@ -740,12 +780,25 @@ export async function upsertPersonAction(_prev: ActionResult, formData: FormData
   const sortOrder = Math.max(0, Math.min(9999, Number(formData.get("sort_order") ?? 0) || 0))
   const isPublished = formData.get("is_published") === "on" || formData.get("is_published") === "true"
   const photoPath = String(formData.get("photo_path") ?? "").trim()
+  const removePhoto = formData.get("remove_photo") === "on"
 
   if (!PEOPLE_KINDS.includes(kind as PeopleKind)) return { ok: false, error: "Invalid person kind." }
   if (!name) return { ok: false, error: "Name is required." }
   if (photoPath && !photoPath.startsWith("people/")) return { ok: false, error: "Invalid photo path." }
 
   const admin = createAdminClient()
+
+  if (removePhoto && id) {
+    const { data: existing } = await admin.from("people").select("photo_path").eq("id", id).maybeSingle()
+    const { error: clearErr } = await admin.from("people").update({ photo_path: null }).eq("id", id)
+    if (clearErr) return { ok: false, error: clearErr.message }
+    if (existing?.photo_path) await admin.storage.from("people").remove([existing.photo_path]).catch(() => {})
+    await audit(admin, user, "person.update", name, { kind, photo_removed: true })
+    revalidatePath("/admin/people")
+    revalidatePath("/speakers")
+    revalidatePath("/oc")
+    return { ok: true, message: `${name}'s photo removed — the card shows their initials now.` }
+  }
 
   let verifiedPhotoPath: string | null = null
   if (photoPath) {
@@ -795,6 +848,19 @@ export async function upsertPersonAction(_prev: ActionResult, formData: FormData
   revalidatePath("/speakers")
   revalidatePath("/oc")
   return { ok: true, message: id ? `${name} updated.` : `${name} added.` }
+}
+
+export async function clearGameSlotAction(formData: FormData): Promise<void> {
+  const user = await requireAdminAction()
+  if (!user) return
+  const slotId = String(formData.get("slotId") ?? "")
+  if (!slotId) return
+  const admin = createAdminClient()
+  const { data: slot } = await admin.from("game_slots").select("game, start_time").eq("id", slotId).maybeSingle()
+  await admin.from("game_slots").update({ taken_by_team_id: null, booked_at: null }).eq("id", slotId)
+  await audit(admin, user, "gaming.slot_clear", `${slot?.game ?? ""} ${slot?.start_time ?? ""}`.trim())
+  revalidatePath("/admin/gaming")
+  revalidatePath("/dashboard/gaming")
 }
 
 export async function deletePersonAction(formData: FormData): Promise<void> {

@@ -21,14 +21,28 @@ export function ScoringGrid({
   round: string
   isPublished: boolean
 }) {
-  const [state, formAction] = useActionState<ActionResult, FormData>(saveScoresAction, { ok: false })
   const [importState, importAction] = useActionState<ImportScoresResult, FormData>(importScoresAction, { ok: false })
   const [showImport, setShowImport] = useState(false)
   const [importRows, setImportRows] = useState<ParsedScoreRow[] | null>(null)
   const [importInvalid, setImportInvalid] = useState<{ line: number; text: string; reason: string }[]>([])
   const [importError, setImportError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [dirty, setDirty] = useState<string[]>([])
+  const [saveState, setSaveState] = useState<ActionResult>({ ok: false })
   const scored = teams.filter((t) => t.id in existing).length
+  const dirtyCount = dirty.length
+
+  function markDirty(teamId: string) {
+    setDirty((prev) => (prev.includes(teamId) ? prev : [...prev, teamId]))
+  }
+
+  async function handleSave(fd: FormData) {
+    const res = await saveScoresAction({ ok: false }, fd)
+    setSaveState(res)
+    if (res.ok) {
+      setDirty([])
+    }
+  }
 
   const onImportFile = (file: File | undefined) => {
     setImportError(null)
@@ -87,8 +101,8 @@ export function ScoringGrid({
         </p>
       </Card>
 
-      {state.error ? <Alert tone="error">{state.error}</Alert> : null}
-      {state.ok && state.message ? <Alert tone="success">{state.message}</Alert> : null}
+      {saveState.error ? <Alert tone="error">{saveState.error}</Alert> : null}
+      {saveState.ok && saveState.message ? <Alert tone="success">{saveState.message}</Alert> : null}
       {importState.error ? <Alert tone="error">{importState.error}</Alert> : null}
       {importState.ok && importState.message ? <Alert tone="success">{importState.message}</Alert> : null}
       {importState.errors && importState.errors.length > 0 ? (
@@ -179,8 +193,9 @@ export function ScoringGrid({
       {teams.length === 0 ? (
         <EmptyState icon="◇" title="No teams to score" description="Import teams first." />
       ) : (
-        <form action={formAction}>
+        <form action={handleSave}>
           <input type="hidden" name="round" value={round} />
+          <input type="hidden" name="dirtyIds" value={dirty.join(",")} />
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -209,6 +224,7 @@ export function ScoringGrid({
                             max={10000}
                             name={`score_${t.id}`}
                             defaultValue={ex ? String(ex.total_score) : ""}
+                            onChange={() => markDirty(t.id)}
                             className="w-24"
                             placeholder="—"
                             aria-label={`Score for ${t.team_code}`}
@@ -219,6 +235,7 @@ export function ScoringGrid({
                             name={`notes_${t.id}`}
                             defaultValue={ex?.notes ?? ""}
                             maxLength={500}
+                            onChange={() => markDirty(t.id)}
                             placeholder="Judge notes (shown on the leaderboard)"
                             aria-label={`Notes for ${t.team_code}`}
                           />
@@ -231,9 +248,15 @@ export function ScoringGrid({
             </div>
           </Card>
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <SubmitButton pendingText="Saving…">Save {round === "final" ? "final" : "round 1"} scores</SubmitButton>
+            <SubmitButton pendingText="Saving…">
+              Save {round === "final" ? "senior final" : round === "round2" ? "quiz" : "OC Round 1"} scores
+            </SubmitButton>
             <span className="text-xs text-muted">
               {scored}/{teams.length} scored
+              {dirtyCount > 0 ? ` · ${dirtyCount} unsaved edit${dirtyCount === 1 ? "" : "s"}` : ""}
+            </span>
+            <span className="text-xs text-muted/70">
+              Only rows you changed are saved — several people can score different teams at the same time.
             </span>
           </div>
         </form>

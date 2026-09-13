@@ -2,7 +2,8 @@ import type { Metadata } from "next"
 import { requireTeamPage } from "@/lib/auth"
 import { getEventTiming, getEventFlags } from "@/lib/settings"
 import { createClient } from "@/lib/supabase/server"
-import type { TeamMember } from "@/lib/database.types"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { gameLabel, type TeamMember } from "@/lib/database.types"
 import { Badge, Card, EmptyState, LinkButton, SectionHeading, StatCard } from "@/components/ui"
 import { Countdown } from "@/components/countdown"
 
@@ -24,9 +25,11 @@ export default async function DashboardOverviewPage() {
   const round1 = (submissions ?? []).find((s) => s.round === "round1") ?? null
   const final = (submissions ?? []).find((s) => s.round === "final") ?? null
   const members = (team.members as TeamMember[] | null) ?? []
+  const admin = createAdminClient()
+  const { data: mySlot } = await admin.from("game_slots").select("game, start_time").eq("taken_by_team_id", team.id).maybeSingle()
 
   const deadlineTarget = team.problem_statement_id ? timing.round1_deadline : null
-  const deadlineLabel = "ROUND 1 CLOSES IN"
+  const deadlineLabel = "OC ROUND 1 CLOSES IN"
   const finalDeadlineActive = flags.finalOpen
 
   return (
@@ -58,16 +61,38 @@ export default async function DashboardOverviewPage() {
             </div>
           ) : (
             <div className="mt-3 space-y-3">
-              <p className="text-sm text-slate-300">Not rolled yet — the dice are waiting.</p>
+              <p className="text-sm text-slate-300">Not rolled yet — watch the Roll Stage.</p>
               <LinkButton href="/dashboard/problem-statement" size="sm">
-                🎲 Roll your problem statement
+                🎁 Watch the stage
               </LinkButton>
             </div>
           )}
         </Card>
 
         <Card className="card-hover p-5">
-          <p className="hud-label">ROUND 1 SUBMISSION</p>
+          <p className="hud-label">GAMING SLOT</p>
+          {mySlot ? (
+            <div className="mt-3 space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge tone="green">BOOKED</Badge>
+                <span className="text-sm text-slate-300">
+                  {gameLabel(mySlot.game)} · {mySlot.start_time}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">One slot per team. Show up on time.</p>
+            </div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              <p className="text-sm text-slate-300">Tekken or FIFA — 15-minute slots, 11:00 to 14:00.</p>
+              <LinkButton href="/dashboard/gaming" variant="secondary" size="sm">
+                Pick your slot
+              </LinkButton>
+            </div>
+          )}
+        </Card>
+
+        <Card className="card-hover p-5">
+          <p className="hud-label">OC ROUND 1 SUBMISSION</p>
           {round1 ? (
             <div className="mt-3 space-y-1">
               <p className="truncate font-mono text-sm text-cyan-200">{round1.file_name ?? "deck"}</p>
@@ -84,7 +109,7 @@ export default async function DashboardOverviewPage() {
             <div className="mt-3 space-y-3">
               <p className="text-sm text-slate-300">No deck uploaded yet.</p>
               <LinkButton href="/dashboard/submit/round1" variant="secondary" size="sm">
-                Submit Round 1 deck
+                Submit PPT deck
               </LinkButton>
             </div>
           )}

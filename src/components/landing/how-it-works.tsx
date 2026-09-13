@@ -1,4 +1,4 @@
-import { Reveal, StaggerContainer, StaggerItem } from "@/components/reveal"
+﻿import { Reveal, StaggerContainer, StaggerItem } from "@/components/reveal"
 
 const STEPS = [
   {
@@ -14,7 +14,7 @@ const STEPS = [
   {
     n: "03",
     title: "Roll your problem",
-    body: "Hit Roll on the dashboard. The dice pick your problem statement and lock it to your team — instantly and irreversibly.",
+    body: "Hit ROLL on the stage. The reel spins, decelerates, and locks a problem statement to your team — instantly and irreversibly.",
   },
   {
     n: "04",
@@ -41,7 +41,7 @@ export function HowItWorks() {
           <p className="font-mono text-[11px] tracking-[0.22em] uppercase text-accent mb-2">Mission Brief</p>
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground mb-3">How it works</h2>
           <p className="text-muted-foreground text-sm mb-12 max-w-lg">
-            Six steps between you and the podium. No surprises — except the dice.
+            Six steps between you and the podium. No surprises — except the roll.
           </p>
         </Reveal>
 

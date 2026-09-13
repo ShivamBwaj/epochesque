@@ -1,10 +1,8 @@
-import type { Metadata } from "next"
+﻿import type { Metadata } from "next"
 import { requireTeamPage } from "@/lib/auth"
-import { getEventTiming, getEventFlags, rollIsOpen } from "@/lib/settings"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { Alert, Badge, Card, Prose, SectionHeading } from "@/components/ui"
-import { Countdown } from "@/components/countdown"
-import { RollButton } from "../roll-button"
+import { AutoRefresh } from "@/components/auto-refresh"
 
 export const dynamic = "force-dynamic"
 
@@ -18,11 +16,10 @@ function fmt(iso: string | null) {
 
 export default async function ProblemStatementPage() {
   const { team } = await requireTeamPage()
-  const [timing, flags] = await Promise.all([getEventTiming(), getEventFlags()])
 
   if (team.problem_statement_id) {
-    const supabase = await createClient()
-    const { data: ps } = await supabase
+    const admin = createAdminClient()
+    const { data: ps } = await admin
       .from("problem_statements")
       .select("*")
       .eq("id", team.problem_statement_id)
@@ -33,7 +30,7 @@ export default async function ProblemStatementPage() {
         <SectionHeading
           kicker="YOUR MISSION"
           title="Problem Statement"
-          description="The dice have spoken. This is what your team builds for Epochesque."
+          description="The roll has spoken. This is what your team builds for Epochesque."
         />
         {ps ? (
           <Card className="ring-glow p-6 md:p-8">
@@ -62,48 +59,28 @@ export default async function ProblemStatementPage() {
     )
   }
 
-  if (!rollIsOpen(flags, timing)) {
-    const scheduledSoon = timing.ps_release_at && !flags.rollOpen
-    return (
-      <div className="space-y-6">
-        <SectionHeading
-          kicker="THE ROLL"
-          title="Problem Statement"
-          description="The dice are loaded. The organizers open the roll at the event — hang tight."
-        />
-        <Card className="mx-auto max-w-xl p-8 text-center md:p-10">
-          {scheduledSoon ? (
-            <>
-              <p className="hud-label">PROBLEM STATEMENTS UNLOCK IN</p>
-              <Countdown target={timing.ps_release_at} className="mt-6 flex flex-col items-center" />
-            </>
-          ) : (
-            <>
-              <span className="dice-face inline-block text-4xl">🎲</span>
-              <p className="hud-label mt-4">WAITING FOR THE ORGANIZERS</p>
-              <p className="mt-3 text-sm text-muted-foreground">
-                The roll opens the moment the OC flips the switch. Keep this page handy.
-              </p>
-            </>
-          )}
-          <div className="mt-8">
-            <span className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.02] px-6 py-3 text-base font-medium text-muted/50">
-              🎲 Roll the dice
-            </span>
-          </div>
-        </Card>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
       <SectionHeading
         kicker="THE ROLL"
         title="Problem Statement"
-        description="Every great build starts with a problem. Yours is one roll away."
+        description="The organizers roll for every team on stage — watch the big screen."
       />
-      <RollButton />
+      <AutoRefresh intervalMs={5000} />
+      <Card className="ring-glow mx-auto max-w-xl p-8 text-center md:p-10">
+        <span className="inline-block text-5xl">🎁</span>
+        <p className="hud-label mt-5">WAITING FOR YOUR TURN ON STAGE</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          When the OC calls your team up, the roll happens on the projector and your problem statement locks in.
+          This page updates itself the moment it lands — no refresh needed.
+        </p>
+        <div className="mt-8">
+          <span className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.02] px-6 py-3 text-base font-medium text-muted/50">
+            🎲 Watch the stage
+          </span>
+        </div>
+        <p className="mt-3 font-mono text-[11px] tracking-widest text-slate-600">ONE CASE PER TEAM · NO RE-ROLLS</p>
+      </Card>
     </div>
   )
 }

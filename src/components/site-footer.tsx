@@ -23,7 +23,6 @@ export function SiteFooter() {
         <nav className="flex flex-wrap justify-center gap-5 text-xs text-muted-foreground">
           <Link href="/speakers" className="hover:text-foreground transition-colors">Speakers</Link>
           <Link href="/oc" className="hover:text-foreground transition-colors">Organizing Committee</Link>
-          <Link href="/leaderboard" className="hover:text-foreground transition-colors">Leaderboard</Link>
           <Link href="/gallery" className="hover:text-foreground transition-colors">Gallery</Link>
           <Link href="/login" className="hover:text-foreground transition-colors">Team Login</Link>
         </nav>

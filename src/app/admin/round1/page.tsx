@@ -6,7 +6,7 @@ import { Card, EmptyState, LinkButton, SectionHeading, StatCard, StatusBadge } f
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
-  title: "Round 1",
+  title: "OC Round 1",
 }
 
 function fmt(iso: string | null) {
@@ -42,20 +42,20 @@ export default async function AdminRound1Page() {
   return (
     <div className="space-y-8">
       <SectionHeading
-        kicker="ROUND 1 — CONCEPT & PITCH"
-        title="Round 1 decks"
+        kicker="OC ROUND 1 — CONCEPT & PITCH"
+        title="OC Round 1 decks"
         description="Every team's deck in one place. Download links expire after 5 minutes — refresh the page for fresh ones. When the judges are done, enter scores under Scoring."
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Teams" value={String(rows.length)} sub="In the arena" />
-        <StatCard label="Decks in" value={String(submittedCount)} sub="Round 1 submissions" />
+        <StatCard label="Decks in" value={String(submittedCount)} sub="OC Round 1 submissions" />
         <StatCard label="Missing" value={String(rows.length - submittedCount)} sub="No deck yet" />
       </div>
 
       <div className="flex flex-wrap gap-3">
         <LinkButton href="/admin/scoring?round=round1" size="sm">
-          Enter Round 1 scores →
+          Enter OC Round 1 scores →
         </LinkButton>
       </div>
 

@@ -10,10 +10,16 @@ export const metadata: Metadata = {
   title: "Scoring",
 }
 
+const ROUNDS: { key: string; label: string }[] = [
+  { key: "round1", label: "OC Round 1" },
+  { key: "round2", label: "Quiz Round" },
+  { key: "final", label: "Senior Final" },
+]
+
 export default async function AdminScoringPage({ searchParams }: { searchParams: Promise<{ round?: string }> }) {
   await requireAdminPage()
   const sp = await searchParams
-  const round = sp.round === "final" ? "final" : "round1"
+  const round = ROUNDS.some((r) => r.key === sp.round) ? sp.round! : "round1"
 
   const admin = createAdminClient()
   const { data: teams } = await admin.from("teams").select("id, team_code, team_name").order("team_code")
@@ -34,15 +40,14 @@ export default async function AdminScoringPage({ searchParams }: { searchParams:
       <SectionHeading
         kicker="JUDGING"
         title="Scoring"
-        description="Enter judge scores per team, then publish the round to the live leaderboard when results are settled."
+        description="Scores per round per team. The final leaderboard is weighted: 20% OC Round 1 + 10% Quiz + 70% Senior Final Evaluation. Several people can score different teams at the same time — only edited rows are saved."
       />
-      <div className="flex gap-2">
-        <LinkButton href="/admin/scoring?round=round1" variant={round === "round1" ? "primary" : "secondary"} size="sm">
-          Round 1
-        </LinkButton>
-        <LinkButton href="/admin/scoring?round=final" variant={round === "final" ? "primary" : "secondary"} size="sm">
-          Final
-        </LinkButton>
+      <div className="flex flex-wrap gap-2">
+        {ROUNDS.map((r) => (
+          <LinkButton key={r.key} href={`/admin/scoring?round=${r.key}`} variant={round === r.key ? "primary" : "secondary"} size="sm">
+            {r.label}
+          </LinkButton>
+        ))}
       </div>
       <ScoringGrid teams={teams ?? []} existing={existing} round={round} isPublished={!!visibility?.is_published} />
     </div>

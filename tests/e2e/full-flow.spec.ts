@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test"
+﻿import { test, expect, type Page } from "@playwright/test"
 import { seed, cleanup, TEAM_EMAIL, TEAM_PASSWORD, TEAM_CODE, type SeedData } from "./helpers"
 
 let data: SeedData
@@ -31,7 +31,7 @@ test("public pages render", async ({ page }) => {
   await expect(page.locator("body")).toContainText("Speakers")
 
   await page.goto("/leaderboard")
-  await expect(page.locator("body")).toContainText("Revealed after judging")
+  await page.waitForURL("**/login**")
 
   await page.goto("/gallery")
   await expect(page.locator("body")).toContainText("Photos drop after the event")
@@ -44,15 +44,22 @@ test("unauthenticated users are redirected from protected areas", async ({ page 
   await page.waitForURL("**/login**")
 })
 
-test("team journey: login, roll PS, lock, submit round 1", async ({ page }) => {
+test("team journey: login, admin rolls on stage, PS locks, submit PPT", async ({ page }) => {
   await login(page, TEAM_EMAIL, TEAM_PASSWORD)
   await page.waitForURL("**/dashboard")
   await expect(page.locator("body")).toContainText(TEAM_CODE)
 
   await page.goto("/dashboard/problem-statement")
-  await page.click('button:has-text("Roll")')
-  await expect(page.locator("body")).toContainText("LOCKED IN AT", { timeout: 30_000 })
-  await expect(page.locator("body")).toContainText("E2E Problem Statement")
+  await expect(page.locator("body")).toContainText("WAITING FOR YOUR TURN ON STAGE")
+
+  const adminPage = await page.context().browser()!.newPage()
+  await login(adminPage, process.env.E2E_ADMIN_EMAIL!, adminPassword)
+  await adminPage.waitForURL("**/admin")
+  await adminPage.goto("/admin/roll")
+  await expect(adminPage.locator("body")).toContainText("Roll Stage")
+  await adminPage.locator('button:has-text("ROLL IT")').first().click()
+  await expect(adminPage.locator("body")).toContainText("the roll has spoken", { timeout: 30_000 })
+  await adminPage.close()
 
   await page.reload()
   await expect(page.locator("body")).toContainText("LOCKED IN AT")
@@ -66,7 +73,7 @@ test("team journey: login, roll PS, lock, submit round 1", async ({ page }) => {
     buffer: Buffer.from("PK\u0003\u0004 fake pptx for e2e"),
   })
   await page.click('button:has-text("Upload deck")')
-  await expect(page.locator("body")).toContainText("Round 1 submission received", { timeout: 30_000 })
+  await expect(page.locator("body")).toContainText("PPT submission received", { timeout: 30_000 })
   await expect(page.locator("body")).toContainText("e2e-deck.pptx")
 })
 

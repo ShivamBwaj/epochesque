@@ -1,42 +1,34 @@
-"use client"
+﻿"use client"
 
-import Image from "next/image"
 import { motion } from "framer-motion"
-import { Dices, Lock, Timer } from "lucide-react"
+import { Package, Lock, Timer } from "lucide-react"
 import { Reveal } from "@/components/reveal"
 
 const FEATURES = [
   {
-    icon: Dices,
+    icon: Package,
     title: "True randomness",
-    body: "Every unclaimed problem statement is in the pool. The roll is atomic — no two teams can ever land the same slot when capacity runs out.",
+    body: "Every unclaimed problem statement rides the reel. The roll decides — the claim is atomic, no two teams can ever land the same slot when capacity runs out.",
     accent: "text-accent",
     span: "md:col-span-2",
     visual: (
-      <div className="mt-5 flex items-center gap-4">
-        <div className="relative h-20 w-20 shrink-0">
-          <Image
-            src="/animations/dice-roll.gif"
-            alt="Dice rolling animation"
-            fill
-            sizes="80px"
-            className="rounded-xl object-contain"
-            unoptimized
-          />
+      <div className="mt-5">
+        <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] py-3" style={{ maskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent)" }}>
+          <motion.div
+            animate={{ x: ["0%", "-50%"] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+            className="flex w-max gap-3"
+          >
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="flex w-28 shrink-0 flex-col gap-1 rounded-lg border border-white/[0.10] bg-white/[0.04] px-3 py-2">
+                <span className="font-mono text-[9px] tracking-widest text-muted/70">PS-{String(i % 3 + 1).padStart(2, "0")}</span>
+                <span className="truncate text-[11px] text-muted-foreground">Problem {i % 3 + 1}</span>
+              </div>
+            ))}
+          </motion.div>
+          <div className="pointer-events-none absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-accent shadow-[0_0_12px_rgba(194,112,62,0.9)]" />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {[1, 2, 3].map((i) => (
-            <motion.span
-              key={i}
-              animate={{ rotate: [0, -12, 10, 0], scale: [1, 1.1, 1] }}
-              transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.35 }}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-accent/25 bg-accent-soft text-lg"
-            >
-              🎲
-            </motion.span>
-          ))}
-          <span className="ml-1 font-mono text-[10px] tracking-widest text-muted/60">ROLLING…</span>
-        </div>
+        <p className="mt-2 font-mono text-[10px] tracking-widest text-muted/60">SPINNING…</p>
       </div>
     ),
   },
@@ -65,13 +57,13 @@ export function RollSection() {
         <Reveal>
           <p className="font-mono text-[11px] tracking-[0.22em] uppercase text-accent mb-2">The Roll</p>
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground mb-3">
-            One roll. One problem.{" "}
+            One spin. One problem.{" "}
             <span className="text-foreground/50 italic" style={{ fontFamily: "var(--font-display)" }}>
               no takebacks
             </span>
           </h2>
           <p className="text-muted-foreground text-sm mb-12 max-w-lg">
-            Every hackathon starts the same way: hours lost arguing over which problem to pick. Epochesque deletes the argument.
+            Every hackathon starts the same way: hours lost arguing over which problem to pick. Epochesque deletes the argument — hit roll and let the reel decide.
           </p>
         </Reveal>
 

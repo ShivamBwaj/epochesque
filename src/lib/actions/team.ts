@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getViewer } from "@/lib/auth"
-import { getEventTiming, getEventFlags, rollIsOpen, deadlinePassed } from "@/lib/settings"
+import { getEventTiming, getEventFlags, deadlinePassed } from "@/lib/settings"
 import { deckFileError, deckMagicError, sanitizeFileName } from "@/lib/validate"
 
 export interface SubmitState {
@@ -15,29 +15,32 @@ export interface SubmitState {
 
 const GITHUB_RE = /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$/
 
-export async function rollProblemStatementAction(): Promise<{ ok: boolean; error?: string }> {
+export interface BookSlotResult {
+  ok: boolean
+  error?: string
+  slot?: { id: string; game: string; start_time: string }
+}
+
+export async function bookGameSlotAction(slotId: string): Promise<BookSlotResult> {
   const viewer = await getViewer()
   if (!viewer || viewer.role !== "team" || !viewer.team) return { ok: false, error: "Not signed in as a team." }
 
-  const [timing, flags] = await Promise.all([getEventTiming(), getEventFlags()])
-  if (!rollIsOpen(flags, timing)) {
-    return { ok: false, error: "The roll is not open yet. The organizers will open it at the event." }
-  }
-  if (viewer.team.problem_statement_id) return { ok: true }
-
   const supabase = await createClient()
-  const { error } = await supabase.rpc("roll_problem_statement")
+  const { data, error } = await supabase.rpc("book_game_slot", { p_slot_id: slotId })
   if (error) {
-    const msg = error.message.includes("ROLL_POOL_EMPTY")
-      ? "All problem statements are taken. Contact the organizers."
-      : error.message.includes("ROLL_NOT_ELIGIBLE")
-        ? "Your team is not eligible to roll."
-        : "Could not roll a problem statement. Try again."
+    const msg = error.message.includes("SLOT_ALREADY_BOOKED")
+      ? "Your team already booked a slot. One slot per team — that's the rule."
+      : error.message.includes("SLOT_TAKEN")
+        ? "Another team just grabbed that slot. Pick another one."
+        : error.message.includes("SLOT_NOT_FOUND")
+          ? "That slot no longer exists. Refresh the page."
+          : "Could not book the slot. Try again."
     return { ok: false, error: msg }
   }
-  revalidatePath("/dashboard/problem-statement")
-  revalidatePath("/dashboard")
-  return { ok: true }
+  revalidatePath("/dashboard/gaming")
+  revalidatePath("/admin/gaming")
+  const s = (data ?? [])[0]
+  return s ? { ok: true, slot: { id: s.slot_id, game: s.slot_game, start_time: s.slot_start } } : { ok: false, error: "Could not book the slot. Try again." }
 }
 
 export interface UploadBeginResult {
@@ -54,7 +57,7 @@ export async function beginRound1UploadAction(fileName: string, fileSize: number
 
   const timing = await getEventTiming()
   if (deadlinePassed(timing.round1_deadline)) {
-    return { ok: false, error: "The Round 1 deadline has passed. Submissions are closed." }
+    return { ok: false, error: "The OC Round 1 deadline has passed. Submissions are closed." }
   }
 
   const fileError = deckFileError(fileName, fileSize)
@@ -74,7 +77,7 @@ export async function submitRound1Action(_prev: SubmitState, formData: FormData)
 
   const timing = await getEventTiming()
   if (deadlinePassed(timing.round1_deadline)) {
-    return { error: "The Round 1 deadline has passed. Submissions are closed." }
+    return { error: "The OC Round 1 deadline has passed. Submissions are closed." }
   }
 
   const path = String(formData.get("path") ?? "")
@@ -127,7 +130,7 @@ export async function submitRound1Action(_prev: SubmitState, formData: FormData)
 
   revalidatePath("/dashboard/submit/round1")
   revalidatePath("/dashboard")
-  return { ok: true, message: "Round 1 submission received." }
+  return { ok: true, message: "PPT submission received." }
 }
 
 export async function submitFinalAction(_prev: SubmitState, formData: FormData): Promise<SubmitState> {

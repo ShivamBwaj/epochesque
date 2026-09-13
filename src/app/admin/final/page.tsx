@@ -38,7 +38,7 @@ export default async function AdminFinalPage() {
       <SectionHeading
         kicker="FINAL ROUND — SHIP IT"
         title="Final round"
-        description="Flip the switch to open repo submissions for every team, then watch the links come in. Scores go in under Scoring like Round 1."
+        description="Flip the switch to open repo submissions for every team, then watch the links come in. Scores go in under Scoring like the other rounds."
       />
 
       <Card className="p-5">

@@ -36,6 +36,18 @@ export type Database = {
         Update: { key?: string; updated_at?: string; value?: Json }
         Relationships: []
       }
+      attendance: {
+        Row: { day: number; is_present: boolean; marked_at: string; member_key: string; member_name: string; reg_no: string; team_id: string }
+        Insert: { day: number; is_present?: boolean; marked_at?: string; member_key: string; member_name?: string; reg_no?: string; team_id: string }
+        Update: { day?: number; is_present?: boolean; marked_at?: string; member_key?: string; member_name?: string; reg_no?: string; team_id?: string }
+        Relationships: [{ foreignKeyName: "attendance_team_id_fkey"; columns: ["team_id"]; isOneToOne: false; referencedRelation: "teams"; referencedColumns: ["id"] }]
+      }
+      game_slots: {
+        Row: { booked_at: string | null; created_at: string; game: string; id: string; slot_index: number; start_time: string; taken_by_team_id: string | null }
+        Insert: { booked_at?: string | null; created_at?: string; game: string; id?: string; slot_index: number; start_time: string; taken_by_team_id?: string | null }
+        Update: { booked_at?: string | null; created_at?: string; game?: string; id?: string; slot_index?: number; start_time?: string; taken_by_team_id?: string | null }
+        Relationships: [{ foreignKeyName: "game_slots_taken_by_team_id_fkey"; columns: ["taken_by_team_id"]; isOneToOne: false; referencedRelation: "teams"; referencedColumns: ["id"] }]
+      }
       gallery_photos: {
         Row: { caption: string; created_at: string; id: string; sort_order: number; storage_path: string }
         Insert: { caption?: string; created_at?: string; id?: string; sort_order?: number; storage_path: string }
@@ -88,6 +100,10 @@ export type Database = {
         Row: { notes: string | null; rank: number | null; team_code: string | null; team_id: string | null; team_name: string | null; total_score: number | null }
         Relationships: [{ foreignKeyName: "scores_team_id_fkey"; columns: ["team_id"]; isOneToOne: false; referencedRelation: "teams"; referencedColumns: ["id"] }]
       }
+      leaderboard_round2_public: {
+        Row: { notes: string | null; rank: number | null; team_code: string | null; team_id: string | null; team_name: string | null; total_score: number | null }
+        Relationships: [{ foreignKeyName: "scores_team_id_fkey"; columns: ["team_id"]; isOneToOne: false; referencedRelation: "teams"; referencedColumns: ["id"] }]
+      }
       winners_public: {
         Row: { body: Json | null; id: string | null; published_at: string | null; title: string | null }
         Relationships: []
@@ -102,6 +118,14 @@ export type Database = {
         Args: { ps_id: number }
         Returns: never
       }
+      book_game_slot: {
+        Args: { p_slot_id: string }
+        Returns: { slot_id: string; slot_game: string; slot_start: string }[]
+      }
+      roll_problem_statement_for: {
+        Args: { p_team_id: string }
+        Returns: { id: number; code: string; title: string; description: string }[]
+      }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
@@ -114,7 +138,20 @@ export type Submission = Database["public"]["Tables"]["submissions"]["Row"]
 export type Score = Database["public"]["Tables"]["scores"]["Row"]
 export type GalleryPhoto = Database["public"]["Tables"]["gallery_photos"]["Row"]
 export type Person = Database["public"]["Tables"]["people"]["Row"]
+export type AttendanceRow = Database["public"]["Tables"]["attendance"]["Row"]
+export type GameSlot = Database["public"]["Tables"]["game_slots"]["Row"]
 export type LeaderboardEntry = Database["public"]["Views"]["leaderboard_round1_public"]["Row"]
+
+export const GAMES = ["tekken", "fifa"] as const
+export type Game = (typeof GAMES)[number]
+
+export function gameLabel(game: string): string {
+  return game === "tekken" ? "Tekken" : game === "fifa" ? "FIFA" : game
+}
+
+export function memberKeyOf(m: TeamMember): string {
+  return m.member_id?.trim() ? m.member_id.trim() : `name:${m.name.trim().toLowerCase()}`
+}
 
 export interface TeamMember {
   member_id?: string | null

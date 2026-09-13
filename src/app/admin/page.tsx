@@ -2,10 +2,10 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { requireAdminPage } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getEventTiming, getEventFlags, rollIsOpen, deadlinePassed } from "@/lib/settings"
-import { setRollOpenAction, setFinalOpenAction } from "@/lib/actions/admin"
+import { getEventTiming, getEventFlags, deadlinePassed } from "@/lib/settings"
+import { setFinalOpenAction } from "@/lib/actions/admin"
 import { SubmitButton } from "@/components/submit-button"
-import { Badge, Card, EmptyState, SectionHeading, StatCard } from "@/components/ui"
+import { Badge, Card, EmptyState, LinkButton, SectionHeading, StatCard } from "@/components/ui"
 
 export const dynamic = "force-dynamic"
 
@@ -47,7 +47,7 @@ export default async function AdminOverviewPage() {
 
   const gates = [
     { label: "Event start", value: timing.event_start, note: "Landing countdown" },
-    { label: "Round 1 deadline", value: timing.round1_deadline, note: deadlinePassed(timing.round1_deadline) ? "CLOSED" : timing.round1_deadline ? "Open" : "No deadline set" },
+    { label: "PPT deadline", value: timing.round1_deadline, note: deadlinePassed(timing.round1_deadline) ? "CLOSED" : timing.round1_deadline ? "Open" : "No deadline set" },
     { label: "Final deadline", value: timing.final_deadline, note: deadlinePassed(timing.final_deadline) ? "CLOSED" : timing.final_deadline ? "Open" : "No deadline set" },
   ]
 
@@ -56,38 +56,26 @@ export default async function AdminOverviewPage() {
       <SectionHeading
         kicker="MISSION CONTROL"
         title="Overview"
-        description="Live state of the event — the two big switches, teams, rolls, submissions, and the last admin actions."
+        description="Live state of the event — the roll stage, submissions, and the last admin actions."
       />
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className={`p-5 ${rollIsOpen(flags, timing) ? "ring-glow" : ""}`}>
+        <Card className="ring-glow p-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="hud-label">🎲 THE ROLL</p>
+              <p className="hud-label">🎲 THE ROLL — STAGE</p>
               <div className="mt-2 flex items-center gap-2">
-                {rollIsOpen(flags, timing) ? (
-                  <Badge tone="green">open — teams can roll</Badge>
-                ) : (
-                  <Badge tone="slate">closed</Badge>
-                )}
-                {timing.ps_release_at && !flags.rollOpen ? (
-                  <span className="text-[11px] text-muted/70">auto-opens {fmt(timing.ps_release_at)}</span>
-                ) : null}
+                <Badge tone={teamRows.length > 0 && taken === teamRows.length ? "green" : "cyan"}>
+                  {teamRows.length > 0 ? `${teamRows.filter((t) => t.problem_statement_id !== null).length}/${teamRows.length} rolled` : "no teams yet"}
+                </Badge>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Nothing unlocks for teams until you flip this — or set a release time in Settings.
+                Call teams up and roll the case on the projector — results lock instantly to each team.
               </p>
             </div>
-            <form action={setRollOpenAction}>
-              <input type="hidden" name="open" value={rollIsOpen(flags, timing) ? "false" : "true"} />
-              <SubmitButton
-                variant={rollIsOpen(flags, timing) ? "secondary" : "primary"}
-                confirm={rollIsOpen(flags, timing) ? "Close the roll? Teams that already rolled keep their problem." : "Open the roll for all teams?"}
-                pendingText="Working…"
-              >
-                {rollIsOpen(flags, timing) ? "Close roll" : "Open roll"}
-              </SubmitButton>
-            </form>
+            <LinkButton href="/admin/roll">
+              Open Roll Stage →
+            </LinkButton>
           </div>
         </Card>
 
@@ -121,9 +109,9 @@ export default async function AdminOverviewPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Teams" value={String(teamRows.length)} sub={`${byStatus.registered} registered · ${byStatus.round1} in round 1`} />
+        <StatCard label="Teams" value={String(teamRows.length)} sub={`${byStatus.registered} registered · ${byStatus.round1} in the run`} />
         <StatCard label="PS capacity" value={`${taken}/${capacity}`} sub={`${capacity - taken} slots free`} />
-        <StatCard label="Round 1 decks" value={String(r1Subs)} sub="Submitted" />
+        <StatCard label="OC R1 decks" value={String(r1Subs)} sub="Submitted" />
         <StatCard label="Final repos" value={String(finalSubs)} sub="Submitted" />
       </div>
 

@@ -85,6 +85,31 @@ async function main() {
     return { denied: !!error, detail: error ? error.message : "RPC EXECUTED" }
   })
 
+  await check("call roll_problem_statement_for RPC as anon", async () => {
+    const { error } = await anon.rpc("roll_problem_statement_for", { p_team_id: "00000000-0000-0000-0000-000000000000" })
+    return { denied: !!error, detail: error ? error.message : "RPC EXECUTED" }
+  })
+
+  await check("read attendance table", async () => {
+    const { data, error } = await anon.from("attendance").select("*")
+    return { denied: !!error, detail: error ? error.message : `${(data ?? []).length} rows visible` }
+  })
+
+  await check("write attendance table", async () => {
+    const { error } = await anon.from("attendance").insert({ day: 1, team_id: "00000000-0000-0000-0000-000000000000", member_key: "hack" })
+    return { denied: !!error, detail: error ? error.message : "INSERT WENT THROUGH" }
+  })
+
+  await check("read game_slots table", async () => {
+    const { data, error } = await anon.from("game_slots").select("*")
+    return { denied: !!error, detail: error ? error.message : `${(data ?? []).length} rows visible` }
+  })
+
+  await check("call book_game_slot RPC as anon", async () => {
+    const { error } = await anon.rpc("book_game_slot", { p_slot_id: "00000000-0000-0000-0000-000000000000" })
+    return { denied: !!error, detail: error ? error.message : "RPC EXECUTED" }
+  })
+
   await check("list submissions storage bucket", async () => {
     const { data, error } = await anon.storage.from("submissions").list("", { limit: 10 })
     return { denied: !!error || (data?.length ?? 0) === 0, detail: error ? error.message : "0 objects visible (RLS filtered)" }

@@ -75,11 +75,14 @@ Supabase (the database + more)
 | `/admin` | Overview — live counts (teams/status/rolls/submissions), event gate states, recent admin actions |
 | `/admin/teams` | Every team: code, members, login email, PS, status. Change the leader from the member dropdown, reset password (shows once, copy it), delete team |
 | `/admin/teams/import` | **CSV import wizard** (details below) |
-| `/admin/problem-statements` | Add/edit the problem pool. Each PS has a `max_teams` capacity — how many teams the dice can assign it |
+| `/admin/attendance` | **Live attendance** — Day 1 / Day 2 tabs, one card per team, per-member checkboxes (reg no shown), ✓ mark-whole-team button, search, incomplete-teams filter, CSV download, Google Sheet re-sync (see `docs/attendance-google-sheet.md`). Syncs across every open admin screen every ~2.5s |
+| `/admin/problem-statements` | Add/edit the problem pool. Each PS has a `max_teams` capacity — the roll always hands out the LEAST-taken statement first, so teams distribute evenly across the pool |
+| `/admin/gaming` | **Gaming slots** — Tekken + FIFA, 11:00–14:00, 15-min slots. One team per slot, one slot per team (atomic). Clear a booking to free a slot |
 | `/admin/people` | Speakers + OC members: name, photo (circular pfp), role, tagline, tags, order, visible/hidden — publishes straight to `/speakers` and `/oc` |
 | `/admin/round1` | All Round 1 decks — download via expiring links (5 min). Scoring lives under Scoring |
 | `/admin/final` | Every team's GitHub repo links. Open/close final submissions with the switch |
-| `/admin/scoring` | The judging sheet — type scores in the grid **or** import the judges' Google-Form CSV. Publish/Unpublish toggle per round |
+| `/admin/scoring` | The judging sheet — type scores in the grid **or** import the judges' Google-Form CSV. **Only rows you changed are saved**, so several panels can score different teams at the same time safely. Publish/Unpublish toggle per round |
+| `/leaderboard` | Admin-only rankings view (public access removed). Publish toggles in Scoring still control what it shows |
 | `/admin/announce-winners` | Podium builder — positions, team codes, prizes. Draft → Publish |
 | `/admin/notices` | Broadcast short announcements to every team dashboard (e.g. "deadline extended 30 min") |
 | `/admin/gallery` | Upload event photos (they appear on `/gallery`) |

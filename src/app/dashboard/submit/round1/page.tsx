@@ -8,7 +8,7 @@ import { Round1Form } from "../../round1-form"
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
-  title: "Submit Round 1",
+  title: "Submit PPT",
 }
 
 function fmt(iso: string | null) {
@@ -31,12 +31,12 @@ export default async function SubmitRound1Page() {
   return (
     <div className="space-y-6">
       <SectionHeading
-        kicker="ROUND 1"
+        kicker="PPT ROUND"
         title="Submit your deck"
         description="Upload your pitch deck as .ppt, .pptx or .pdf. Max 25 MB. Re-upload any time until the deadline — the newest file wins."
       />
 
-      {closed ? <Alert tone="error">Round 1 submissions are closed — the deadline has passed.</Alert> : null}
+      {closed ? <Alert tone="error">OC Round 1 submissions are closed — the deadline has passed.</Alert> : null}
 
       {submission ? (
         <Card className="p-5">

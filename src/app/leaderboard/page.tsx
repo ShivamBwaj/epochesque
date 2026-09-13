@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
+import { requireAdminPage } from "@/lib/auth"
 import { Badge, Card, EmptyState, SectionHeading } from "@/components/ui"
 import type { Json, LeaderboardEntry, WinnersEntry } from "@/lib/database.types"
 
@@ -7,7 +8,8 @@ export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Leaderboard",
-  description: "Live rankings for Epochesque — Round 1 and final round scores, plus the winners' podium.",
+  description: "Round 1 and final round scores, plus the winners' podium — admin view.",
+  robots: { index: false, follow: false },
 }
 
 const MEDALS: Record<number, { icon: string; label: string; border: string; tint: string }> = {
@@ -130,14 +132,17 @@ function RoundBoard({
 }
 
 export default async function LeaderboardPage() {
+  await requireAdminPage()
   const supabase = await createClient()
-  const [round1Res, finalRes, winnersRes] = await Promise.all([
+  const [round1Res, round2Res, finalRes, winnersRes] = await Promise.all([
     supabase.from("leaderboard_round1_public").select("*"),
+    supabase.from("leaderboard_round2_public").select("*"),
     supabase.from("leaderboard_final_public").select("*"),
     supabase.from("winners_public").select("*"),
   ])
 
   const round1 = sortRows(round1Res.data ?? [])
+  const round2 = sortRows(round2Res.data ?? [])
   const final = sortRows(finalRes.data ?? [])
   const winnerRows = (winnersRes.data ?? [])
     .filter((w) => w.body != null)
@@ -164,16 +169,23 @@ export default async function LeaderboardPage() {
       ) : null}
 
       <RoundBoard
-        kicker="ROUND 1"
-        title="Round 1 — Concept & Pitch"
-        description="PPT and prototype round. Every submission, scored and ranked."
+        kicker="ROUND 1 · 20%"
+        title="OC Round 1 — Concept & Pitch"
+        description="Deck and prototype round, judged by the OC. Counts 20% toward the final ranking."
         rows={round1}
       />
 
       <RoundBoard
-        kicker="FINAL ROUND"
-        title="Final Round — Ship It"
-        description="GitHub repos, live demos, and one last pass from the judges."
+        kicker="ROUND 2 · 10%"
+        title="Quiz Round"
+        description="The on-stage quiz. Counts 10% toward the final ranking."
+        rows={round2}
+      />
+
+      <RoundBoard
+        kicker="FINAL · 70%"
+        title="Senior Final Evaluation — Weighted Score"
+        description="The final ranking: 20% OC Round 1 + 10% Quiz + 70% Senior Final Evaluation. A missing round counts as 0."
         rows={final}
       />
     </div>
