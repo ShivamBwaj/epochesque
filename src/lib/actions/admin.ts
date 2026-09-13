@@ -749,13 +749,21 @@ export async function upsertPersonAction(_prev: ActionResult, formData: FormData
 
   let verifiedPhotoPath: string | null = null
   if (photoPath) {
-    const { data: blob, error: downErr } = await admin.storage.from("people").download(photoPath)
-    if (downErr || !blob) return { ok: false, error: "Uploaded photo not found. Upload it again." }
-    const head = Buffer.from(await blob.arrayBuffer())
-    const magicError = imageMagicError(photoPath, head)
+    const { data: signedPhoto } = await admin.storage.from("people").createSignedUrl(photoPath, 60)
+    if (!signedPhoto?.signedUrl) return { ok: false, error: "Uploaded photo not found. Upload it again." }
+    const imgRes = await fetch(signedPhoto.signedUrl, { headers: { Range: "bytes=0-15" } })
+    if (!imgRes.ok) return { ok: false, error: "Uploaded photo not found. Upload it again." }
+    const imgHead = Buffer.from(await imgRes.arrayBuffer())
+    const magicError = imageMagicError(photoPath, imgHead)
     if (magicError) {
       await admin.storage.from("people").remove([photoPath]).catch(() => {})
       return { ok: false, error: magicError }
+    }
+    const contentRange = imgRes.headers.get("content-range")
+    const realSize = contentRange ? Number(contentRange.split("/")[1]) : NaN
+    if (Number.isFinite(realSize) && realSize > 5 * 1024 * 1024) {
+      await admin.storage.from("people").remove([photoPath]).catch(() => {})
+      return { ok: false, error: "Photo is larger than 5 MB." }
     }
     verifiedPhotoPath = photoPath
     if (id) {

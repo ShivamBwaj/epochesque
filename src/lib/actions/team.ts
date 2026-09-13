@@ -86,13 +86,21 @@ export async function submitRound1Action(_prev: SubmitState, formData: FormData)
   if (fileError) return { error: fileError }
 
   const admin = createAdminClient()
-  const { data: blob, error: downErr } = await admin.storage.from("submissions").download(path)
-  if (downErr || !blob) return { error: "Uploaded file not found. Upload it again." }
-  const head = Buffer.from(await blob.arrayBuffer())
+  const { data: signed } = await admin.storage.from("submissions").createSignedUrl(path, 60)
+  if (!signed?.signedUrl) return { error: "Could not verify the upload. Try again." }
+  const headRes = await fetch(signed.signedUrl, { headers: { Range: "bytes=0-15" } })
+  if (!headRes.ok) return { error: "Uploaded file not found. Upload it again." }
+  const head = Buffer.from(await headRes.arrayBuffer())
   const magicError = deckMagicError(fileName, head)
   if (magicError) {
     await admin.storage.from("submissions").remove([path]).catch(() => {})
     return { error: magicError }
+  }
+  const contentRange = headRes.headers.get("content-range")
+  const realSize = contentRange ? Number(contentRange.split("/")[1]) : fileSize
+  if (Number.isFinite(realSize) && realSize > 25 * 1024 * 1024) {
+    await admin.storage.from("submissions").remove([path]).catch(() => {})
+    return { error: "File is larger than 25 MB." }
   }
 
   const { data: existing } = await admin
