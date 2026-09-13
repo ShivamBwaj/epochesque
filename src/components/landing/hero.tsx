@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import { motion } from "framer-motion"
 import { AuroraBackground } from "@/components/ui/aurora-background"
 import { RotatingWords } from "@/components/rotating-words"
@@ -11,29 +10,12 @@ export function Hero({ eventStart }: { eventStart: string | null }) {
     <AuroraBackground className="!bg-background overflow-hidden min-h-[100dvh]">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent z-10" />
 
-      <div className="relative z-10 max-w-[1200px] mx-auto px-6 w-full pt-28 pb-20 flex flex-col items-center text-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="relative h-40 w-40 md:h-52 md:w-52"
-        >
-          <Image
-            src="/animations/dice-roll.gif"
-            alt="Dice rolling"
-            fill
-            sizes="(max-width: 768px) 160px, 208px"
-            className="object-contain drop-shadow-[0_0_40px_rgba(194,112,62,0.25)]"
-            priority
-            unoptimized
-          />
-        </motion.div>
-
+      <div className="relative z-10 max-w-[1200px] mx-auto px-6 w-full pt-36 pb-20 flex flex-col items-center text-center">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.15 }}
-          className="mb-6 mt-2 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1"
+          transition={{ duration: 0.5 }}
+          className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1"
         >
           <span className="relative flex h-1.5 w-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
