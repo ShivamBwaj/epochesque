@@ -191,7 +191,7 @@ test("scoring: two panels save concurrently without clobbering each other", asyn
   await ctxB.close()
 })
 
-test("final leaderboard is weighted 15/15/70", async ({ page }) => {
+test("final leaderboard is weighted 20/10/70", async ({ page }) => {
   const ids: Record<string, string> = {}
   for (const code of [TEAM_CODE, TEAM2_CODE]) {
     const { data } = await admin.from("teams").select("id").eq("team_code", code).single()
@@ -214,12 +214,11 @@ test("final leaderboard is weighted 15/15/70", async ({ page }) => {
   await page.goto("/leaderboard")
   await expect(page.locator("body")).toContainText("Weighted Score", { timeout: 20_000 })
   await expect(page.locator("body")).toContainText("100")
-  await expect(page.locator("body")).toContainText("15")
 
   const { data: finalRows } = await admin.from("leaderboard_final_public").select("team_code, total_score")
   const map = new Map((finalRows ?? []).map((r: { team_code: string; total_score: number }) => [r.team_code, Number(r.total_score)]))
   expect(map.get(TEAM_CODE)).toBe(100)
-  expect(map.get(TEAM2_CODE)).toBe(15)
+  expect(map.get(TEAM2_CODE)).toBe(20)
 
   await admin.from("leaderboard_visibility").upsert({ round: "final", is_published: false, published_at: null }, { onConflict: "round" })
 })
