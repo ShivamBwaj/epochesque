@@ -64,3 +64,6 @@ score-fail.png
 
 dev-server.log
 public/aman.jpeg
+
+# Local Netlify folder
+.netlify
