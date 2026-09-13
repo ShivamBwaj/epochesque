@@ -1,18 +1,23 @@
 import Link from "next/link"
+import Image from "next/image"
 
 export function SiteFooter() {
   return (
     <footer className="border-t border-white/[0.06] py-12 mt-8">
       <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-6 px-6 md:flex-row">
         <div className="flex items-center gap-2.5">
-          <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
-            <rect x="4" y="4" width="24" height="24" rx="5" stroke="currentColor" strokeWidth="2.5" />
-            <circle cx="11" cy="11" r="2.2" fill="#c2703e" />
-            <circle cx="21" cy="11" r="2.2" fill="currentColor" />
-            <circle cx="16" cy="16" r="2.2" fill="#c2703e" />
-          </svg>
-          <span className="text-sm font-semibold tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>
-            Epochesque
+          <Image
+            src="/hackclub-logo.jpg"
+            alt="HackClub VITC"
+            width={28}
+            height={28}
+            className="h-7 w-7 rounded-full object-cover ring-1 ring-white/10"
+          />
+          <span className="text-sm text-muted-foreground">
+            <span className="font-semibold tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>
+              Epochesque
+            </span>{" "}
+            by <span className="font-semibold text-foreground">HackClub</span>
           </span>
         </div>
         <nav className="flex flex-wrap justify-center gap-5 text-xs text-muted-foreground">
