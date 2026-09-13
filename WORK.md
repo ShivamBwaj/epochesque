@@ -2,10 +2,13 @@
 
 Source of truth for ongoing work. Update this file as things get done or new issues appear.
 
-## Status: ✅ v5 — DEPLOYED TO PRODUCTION + FULLY VERIFIED
+## Status: ✅ v6 — LIVE, branded (HackClub), hero redesigned
 
-**Production:** https://epochesque.vercel.app · **Repo:** github.com/ShivamBwaj/epochesque (private, push-to-deploy)
-**DB:** live Supabase (all 9 migrations applied). DB left PRISTINE at handover: 0 teams / 0 PS / 0 scores / clean audit, admin account only.
+## v6 — branding + hero
+- [x] HackClub logo = site favicon + apple-touch icon (from `public/hackclub-logo.jpg`)
+- [x] Footer: "Epochesque by HackClub" with logo
+- [x] Hero redesigned: arena terminal removed; centered layout — dice GIF, badge, huge headline, rotating words, countdown, CTAs
+- [x] Dice-roll Lottie GIF on the roll page + landing roll section
 
 ## v5 — production deploy + deep verification pass
 - [x] GitHub repo + Vercel project + env vars (prod & preview) + push-to-deploy
