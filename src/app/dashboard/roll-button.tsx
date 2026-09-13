@@ -1,11 +1,10 @@
 "use client"
 
+import Image from "next/image"
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { rollProblemStatementAction } from "@/lib/actions/team"
 import { Alert, Button, Card } from "@/components/ui"
-
-const tiles = [0, 1, 2]
 
 export function RollButton() {
   const router = useRouter()
@@ -32,22 +31,16 @@ export function RollButton() {
         One roll per team. The dice decide your mission — no take-backs, no re-rolls.
       </p>
 
-      <div className="mt-8 flex items-center justify-center gap-3 md:gap-4">
-        {tiles.map((i) => (
-          <div
-            key={i}
-            className={`flex h-20 w-20 items-center justify-center rounded-2xl border bg-slate-950/70 md:h-24 md:w-24 ${
-              pending ? "border-cyan-500/50 shadow-lg shadow-cyan-500/20" : "border-slate-700/60"
-            }`}
-          >
-            <span
-              className={`text-4xl md:text-5xl ${pending ? "dice-face" : ""}`}
-              style={pending ? { animationDelay: `${i * 140}ms`, animationDuration: `${0.7 + i * 0.15}s` } : undefined}
-            >
-              🎲
-            </span>
-          </div>
-        ))}
+      <div className="relative mx-auto mt-8 h-48 w-48 md:h-56 md:w-56">
+        <Image
+          src="/animations/dice-roll.gif"
+          alt="Dice rolling"
+          fill
+          sizes="(max-width: 768px) 192px, 224px"
+          className={`rounded-2xl object-contain transition-transform duration-300 ${pending ? "scale-105" : "scale-100 hover:scale-[1.03]"}`}
+          priority
+          unoptimized
+        />
       </div>
 
       {error ? (

@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { motion } from "framer-motion"
 import { Dices, Lock, Timer } from "lucide-react"
 import { Reveal } from "@/components/reveal"
@@ -12,20 +13,30 @@ const FEATURES = [
     accent: "text-accent",
     span: "md:col-span-2",
     visual: (
-      <div className="flex items-center gap-3 mt-5">
-        {[1, 2, 3].map((i) => (
-          <motion.span
-            key={i}
-            animate={{ rotate: [0, -12, 10, 0], scale: [1, 1.1, 1] }}
-            transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.35 }}
-            className="flex h-11 w-11 items-center justify-center rounded-xl border border-accent/25 bg-accent-soft text-xl"
-          >
-            🎲
-          </motion.span>
-        ))}
-        <span className="ml-2 font-mono text-[10px] tracking-widest text-muted/60">
-          ROLLING…
-        </span>
+      <div className="mt-5 flex items-center gap-4">
+        <div className="relative h-20 w-20 shrink-0">
+          <Image
+            src="/animations/dice-roll.gif"
+            alt="Dice rolling animation"
+            fill
+            sizes="80px"
+            className="rounded-xl object-contain"
+            unoptimized
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {[1, 2, 3].map((i) => (
+            <motion.span
+              key={i}
+              animate={{ rotate: [0, -12, 10, 0], scale: [1, 1.1, 1] }}
+              transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.35 }}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-accent/25 bg-accent-soft text-lg"
+            >
+              🎲
+            </motion.span>
+          ))}
+          <span className="ml-1 font-mono text-[10px] tracking-widest text-muted/60">ROLLING…</span>
+        </div>
       </div>
     ),
   },
