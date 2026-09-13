@@ -2,6 +2,8 @@
 
 Two-day hackathon site with a Trench-style aurora UI: teams log in, roll a locked problem statement, submit Round 1 PPTs, admins score (grid or CSV import) and publish leaderboards, finalists submit GitHub repos, winners get announced, notices broadcast to dashboards, every admin action is audit-logged.
 
+**➡️ Full guide (architecture, admin runbook, team flow, security, deploy): [GUIDE.md](./GUIDE.md)**
+
 **Stack:** Next.js 16 (App Router, TS, Tailwind v4, framer-motion) · Supabase (Postgres + Auth + Storage) · Vercel-ready.
 
 ## Quick start

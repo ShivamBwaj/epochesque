@@ -2,7 +2,13 @@
 
 Source of truth for ongoing work. Update this file as things get done or new issues appear.
 
-## Status: ✅ v2 COMPLETE — Trench UI + full feature set + deep tests all green
+## Status: ✅ v2.1 COMPLETE — dry-run verified, GUIDE.md written, OG/favicon added
+
+## v2.1 additions
+- [x] **Real-data dry-run import** (`scripts/dry-run-import.mjs`): all 22 real teams + auth users created against live DB with ZERO errors, spot-check login verified, full cleanup — DB pristine after
+- [x] **GUIDE.md** — the full human guide: architecture ("is there a backend" — yes, explained), every page & what it does, team flow, chronological admin runbook, security model, deploy, commands
+- [x] **OG image** (`src/app/opengraph-image.tsx`, edge ImageResponse — verified rendering HTTP 200 PNG) + **favicon** (`src/app/icon.svg`, dice logo)
+- [x] README now links to GUIDE.md
 
 ## Final verification (all green)
 
