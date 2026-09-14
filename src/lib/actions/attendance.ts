@@ -234,43 +234,29 @@ export async function connectSheetsWebhookAction(_prev: ConnectSheetsResult, for
     return { ok: false, error: "That doesn't look like a Google Apps Script web app URL (should end in /exec)." }
   }
 
-  // Test it before saving: push a zero-row-safe resync isn't possible (rows
-  // required), so we push day 1's current state as the connectivity check —
-  // this also means "Connect" doubles as an immediate first sync.
-  const admin = createAdminClient()
-  const { data: teams } = await admin.from("teams").select("id, team_code, team_name, members").order("team_code")
-  const { data: attRows } = await admin.from("attendance").select("team_id, member_key, is_present").eq("day", 1)
-  const presentSet = new Set((attRows ?? []).filter((r) => r.is_present).map((r) => `${r.team_id}|${r.member_key}`))
-  const rows: SheetsAttendanceRow[] = []
-  for (const t of teams ?? []) {
-    const list = Array.isArray(t.members) ? (t.members as unknown as TeamMember[]) : []
-    for (const m of list) {
-      const key = memberKeyOf(m)
-      rows.push({
-        team_code: t.team_code,
-        team_name: t.team_name,
-        member_key: key,
-        name: m.name ?? "",
-        reg_no: m.member_id ?? "",
-        present: presentSet.has(`${t.id}|${key}`),
-        marked_at: new Date().toISOString(),
-      })
-    }
-  }
-
+  // Ping first with an empty payload — cheap and fast, so a slow Apps Script
+  // cold start (common on the very first hit after deploying it) doesn't get
+  // compounded by also building and shipping the full attendance snapshot.
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "attendance.resync", day: 1, rows }),
-      signal: AbortSignal.timeout(8000),
+      body: JSON.stringify({ type: "attendance.resync", day: 1, rows: [] }),
+      signal: AbortSignal.timeout(15000),
     })
     if (!res.ok) return { ok: false, error: `Sheet did not confirm (HTTP ${res.status}). Check the Apps Script deployment (Execute as: Me, Access: Anyone) and try again.` }
-  } catch {
-    return { ok: false, error: "Could not reach that URL. Check it's the deployed web app URL and try again." }
+  } catch (err) {
+    const timedOut = err instanceof Error && err.name === "TimeoutError"
+    return {
+      ok: false,
+      error: timedOut
+        ? "The sheet took too long to respond (Apps Script cold start). This is usually a one-off — try Connect again."
+        : "Could not reach that URL. Check it's the deployed web app URL and try again.",
+    }
   }
 
   await setSheetsWebhookUrl(url)
+  const admin = createAdminClient()
   await admin.from("admin_audit").insert({
     actor_user_id: user.id,
     actor_email: user.email ?? "",
@@ -279,8 +265,26 @@ export async function connectSheetsWebhookAction(_prev: ConnectSheetsResult, for
     details: {} as never,
   }).then(() => undefined, () => undefined)
 
+  // Now that the sheet answered, do the real first sync (both days) in the
+  // background so the admin isn't stuck waiting on it too.
+  after(async () => {
+    for (const day of [1, 2]) {
+      const state = await buildState(day)
+      const rows: SheetsAttendanceRow[] = (state.members ?? []).map((m) => ({
+        team_code: m.teamCode,
+        team_name: m.teamName,
+        member_key: m.memberKey,
+        name: m.name,
+        reg_no: m.regNo,
+        present: m.present,
+        marked_at: new Date().toISOString(),
+      }))
+      await pushAttendanceToSheets("attendance.resync", day, rows)
+    }
+  })
+
   revalidatePath("/admin/attendance")
-  return { ok: true, message: "Connected — Day 1 synced. Every tick now mirrors live." }
+  return { ok: true, message: "Connected — syncing both days now. Every tick mirrors live from here." }
 }
 
 export async function disconnectSheetsWebhookAction(): Promise<void> {
