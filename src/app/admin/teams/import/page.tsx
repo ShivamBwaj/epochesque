@@ -26,7 +26,7 @@ export default async function AdminImportPage() {
           <p>
             Columns: <strong>Id, Name, Email, Ph_No, College, Payment Status, College Type, Team Id</strong> — headers
             are case-insensitive. One row per member; rows sharing a Team Id become one team. The member you pick as
-            leader gets the login (their email + a generated password).
+            leader gets the login (their email — they set their own password at first sign-in).
           </p>
           <p className="mt-2">
             Exporting from Excel? Use <strong>Save As → CSV UTF-8</strong> so names and college names don&apos;t get

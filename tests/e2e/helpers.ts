@@ -59,6 +59,10 @@ export async function seed(): Promise<SeedData> {
       leader_email: TEAM_EMAIL,
       auth_user_id: authUser.user.id,
       status: "registered",
+      // Seeded with a known password directly (bypassing the self-serve
+      // setup flow) — mark it already set so login tests hit the normal
+      // password field instead of the "create your password" form.
+      password_set: true,
     })
     .select("id")
     .single()

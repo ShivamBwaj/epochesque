@@ -53,3 +53,65 @@ export async function logoutAction(): Promise<void> {
   await supabase.auth.signOut()
   redirect("/")
 }
+
+export interface EmailCheckResult {
+  needsSetup: boolean
+}
+
+// Drives the login form's two-step UX: a team leader who hasn't set their
+// own password yet gets a "create your password" form instead of a
+// password field. Rate-limited per-IP since it's an unauthenticated probe
+// that reveals a small amount of info (whether an email belongs to a team
+// still awaiting first-time setup) — same tradeoff accepted for the
+// self-serve design (no shared/guessable initial password to leak instead).
+export async function checkLeaderEmailAction(email: string): Promise<EmailCheckResult> {
+  const clean = email.trim().toLowerCase()
+  if (!clean) return { needsSetup: false }
+
+  const hdrs = await headers()
+  const ip = (hdrs.get("x-forwarded-for") ?? "local").split(",")[0].trim()
+  if (rateLimited(`emailcheck:ip:${ip}`, 60, 15 * 60_000)) return { needsSetup: false }
+
+  const admin = createAdminClient()
+  const { data: team } = await admin.from("teams").select("password_set").eq("leader_email", clean).maybeSingle()
+  return { needsSetup: !!team && !team.password_set }
+}
+
+export interface SetPasswordState {
+  error?: string
+}
+
+export async function setInitialPasswordAction(_prev: SetPasswordState, formData: FormData): Promise<SetPasswordState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase()
+  const password = String(formData.get("password") ?? "")
+  const confirm = String(formData.get("confirmPassword") ?? "")
+
+  if (!email) return { error: "Enter your email." }
+  if (password.length < 8) return { error: "Password must be at least 8 characters." }
+  if (password !== confirm) return { error: "Passwords don't match." }
+
+  const hdrs = await headers()
+  const ip = (hdrs.get("x-forwarded-for") ?? "local").split(",")[0].trim()
+  if (rateLimited(`setpw:ip:${ip}`, 20, 15 * 60_000)) return { error: "Too many attempts. Try again in 15 minutes." }
+  if (rateLimited(`setpw:email:${email}`, 8, 15 * 60_000)) return { error: "Too many attempts for this email. Try again in 15 minutes." }
+
+  const admin = createAdminClient()
+  const { data: team } = await admin.from("teams").select("id, auth_user_id, team_code, password_set").eq("leader_email", email).maybeSingle()
+  if (!team || !team.auth_user_id) return { error: "That email isn't registered as a team leader. Contact the organizers." }
+  if (team.password_set) return { error: "This account already has a password set — use the password field instead." }
+
+  const { error: pwErr } = await admin.auth.admin.updateUserById(team.auth_user_id, { password })
+  if (pwErr) return { error: "Could not set your password. Try again." }
+
+  await admin.from("teams").update({ password_set: true }).eq("id", team.id)
+  await admin
+    .from("admin_audit")
+    .insert({ actor_user_id: team.auth_user_id, actor_email: email, action: "team.password_set", target: team.team_code, details: {} as never })
+    .then(() => undefined, () => undefined)
+
+  const supabase = await createClient()
+  const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
+  if (signInErr) return { error: "Password set — but sign-in failed. Try logging in again." }
+
+  redirect("/dashboard")
+}

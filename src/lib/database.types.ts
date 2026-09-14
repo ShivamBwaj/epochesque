@@ -91,9 +91,9 @@ export type Database = {
         Relationships: [{ foreignKeyName: "submissions_team_id_fkey"; columns: ["team_id"]; isOneToOne: false; referencedRelation: "teams"; referencedColumns: ["id"] }]
       }
       teams: {
-        Row: { auth_user_id: string | null; created_at: string; id: string; leader_email: string; members: Json; problem_statement_id: number | null; ps_locked_at: string | null; status: string; team_code: string; team_name: string; updated_at: string }
-        Insert: { auth_user_id?: string | null; created_at?: string; id?: string; leader_email: string; members?: Json; problem_statement_id?: number | null; ps_locked_at?: string | null; status?: string; team_code: string; team_name: string; updated_at?: string }
-        Update: { auth_user_id?: string | null; created_at?: string; id?: string; leader_email?: string; members?: Json; problem_statement_id?: number | null; ps_locked_at?: string | null; status?: string; team_code?: string; team_name?: string; updated_at?: string }
+        Row: { auth_user_id: string | null; created_at: string; id: string; leader_email: string; members: Json; password_set: boolean; problem_statement_id: number | null; ps_locked_at: string | null; status: string; team_code: string; team_name: string; updated_at: string }
+        Insert: { auth_user_id?: string | null; created_at?: string; id?: string; leader_email: string; members?: Json; password_set?: boolean; problem_statement_id?: number | null; ps_locked_at?: string | null; status?: string; team_code: string; team_name: string; updated_at?: string }
+        Update: { auth_user_id?: string | null; created_at?: string; id?: string; leader_email?: string; members?: Json; password_set?: boolean; problem_statement_id?: number | null; ps_locked_at?: string | null; status?: string; team_code?: string; team_name?: string; updated_at?: string }
         Relationships: [{ foreignKeyName: "teams_ps_fk"; columns: ["problem_statement_id"]; isOneToOne: false; referencedRelation: "problem_statements"; referencedColumns: ["id"] }]
       }
     }

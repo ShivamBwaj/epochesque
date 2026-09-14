@@ -6,7 +6,6 @@ import type { ParsedTeam } from "@/lib/csv"
 import { importTeamsConfirmAction } from "@/lib/actions/admin"
 import type { ImportPayloadTeam, ImportResult } from "@/lib/actions/admin"
 import { SubmitButton } from "@/components/submit-button"
-import { CopyField } from "@/components/copy-field"
 import { Alert, Badge, Button, Card, Input, Label, Select, StatCard } from "@/components/ui"
 
 type Step = "upload" | "preview" | "confirm"
@@ -76,14 +75,14 @@ export function ImportWizard() {
   const downloadCredentials = () => {
     const rows = state.credentials ?? []
     const lines = [
-      "team_code,team_name,email,password",
-      ...rows.map((r) => [r.team_code, r.team_name, r.email, r.password].map(csvCell).join(",")),
+      "team_code,team_name,email",
+      ...rows.map((r) => [r.team_code, r.team_name, r.email].map(csvCell).join(",")),
     ]
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = "epochesque-team-credentials.csv"
+    a.download = "epochesque-team-list.csv"
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -264,8 +263,9 @@ export function ImportWizard() {
           <p className="hud-label mb-1">STEP 3 / 3 — DONE</p>
           {state.ok ? (
             <Alert tone="success">
-              Created {state.createdCount ?? 0} team{state.createdCount === 1 ? "" : "s"}. Hand the credentials below to
-              each team leader.
+              Created {state.createdCount ?? 0} team{state.createdCount === 1 ? "" : "s"}. No passwords to hand out —
+              each leader goes to <code className="font-mono text-accent-hover">/login</code>, enters their email, and
+              sets their own password on first sign-in.
             </Alert>
           ) : null}
           {state.error ? <Alert tone="error">{state.error}</Alert> : null}
@@ -274,19 +274,18 @@ export function ImportWizard() {
         {state.credentials && state.credentials.length > 0 ? (
           <Card className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-              <p className="hud-label">CREDENTIALS</p>
+              <p className="hud-label">TEAMS CREATED</p>
               <Button variant="secondary" size="sm" onClick={downloadCredentials}>
                 Download CSV
               </Button>
             </div>
             <div className="overflow-x-auto border-t border-slate-800/70">
-              <table className="w-full min-w-[40rem] text-left text-sm">
+              <table className="w-full min-w-[32rem] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-800/70">
                     <th className="hud-label px-5 py-3">CODE</th>
                     <th className="hud-label px-5 py-3">TEAM</th>
                     <th className="hud-label px-5 py-3">EMAIL</th>
-                    <th className="hud-label px-5 py-3">PASSWORD</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
@@ -295,9 +294,6 @@ export function ImportWizard() {
                       <td className="px-5 py-2.5 font-mono text-xs text-cyan-300">{c.team_code}</td>
                       <td className="px-5 py-2.5 text-slate-100">{c.team_name}</td>
                       <td className="px-5 py-2.5 text-slate-400">{c.email}</td>
-                      <td className="w-64 px-5 py-2.5">
-                        <CopyField value={c.password} />
-                      </td>
                     </tr>
                   ))}
                 </tbody>

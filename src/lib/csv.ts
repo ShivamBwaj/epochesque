@@ -194,8 +194,13 @@ export function parseRegistrationCsv(text: string): ParseResult {
   return { teams, skipped, totalRows: dataRowCount }
 }
 
-export function genPassword(teamCode: string): string {
-  return `Epoch@${teamCode}`
+// Used for brand-new teams at creation time. Never shown to anyone —
+// the leader always goes through the self-serve "set your password" flow
+// on first login instead, so there's no shared/guessable initial credential.
+export function genPlaceholderPassword(): string {
+  const bytes = new Uint8Array(24)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")
 }
 
 export interface ParsedScoreRow {

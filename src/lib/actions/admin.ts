@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getSessionUser, isAdmin } from "@/lib/auth"
 import type { TeamMember, WinnersEntry } from "@/lib/database.types"
 import type { RollResult } from "@/components/case-opener"
-import { genPassword } from "@/lib/csv"
+import { genPlaceholderPassword } from "@/lib/csv"
 import { queueRosterChangeResync } from "@/lib/actions/attendance"
 import { sanitizeFileName, imageFileError, imageMagicError } from "@/lib/validate"
 import type { User } from "@supabase/supabase-js"
@@ -34,14 +34,12 @@ export interface ImportPayloadTeam {
 }
 
 export interface ImportResult extends ActionResult {
-  credentials?: { team_code: string; team_name: string; email: string; password: string }[]
+  credentials?: { team_code: string; team_name: string; email: string }[]
   createdCount?: number
   errors?: string[]
 }
 
-export interface ResetPasswordResult extends ActionResult {
-  password?: string
-}
+export type ResetPasswordResult = ActionResult
 
 export interface ImportScoresResult extends ActionResult {
   savedCount?: number
@@ -152,10 +150,9 @@ export async function importTeamsConfirmAction(_prev: ImportResult, formData: Fo
     while (takenCodes.has(candidate.toLowerCase())) candidate = `${code}-${n++}`
     code = candidate
 
-    const password = genPassword(code)
     const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
       email: leaderEmail,
-      password,
+      password: genPlaceholderPassword(),
       email_confirm: true,
       user_metadata: { team_code: code, role: "team" },
     })
@@ -181,6 +178,7 @@ export async function importTeamsConfirmAction(_prev: ImportResult, formData: Fo
       leader_email: leaderEmail,
       auth_user_id: authUser.user.id,
       status: "registered",
+      password_set: false,
     })
     if (teamErr) {
       await admin.auth.admin.deleteUser(authUser.user.id).catch(() => {})
@@ -190,7 +188,7 @@ export async function importTeamsConfirmAction(_prev: ImportResult, formData: Fo
 
     takenCodes.add(code.toLowerCase())
     takenEmails.add(leaderEmail)
-    credentials.push({ team_code: code, team_name: t.team_name || label, email: leaderEmail, password })
+    credentials.push({ team_code: code, team_name: t.team_name || label, email: leaderEmail })
     created++
   }
 
@@ -248,7 +246,6 @@ export interface ManualMemberInput {
 }
 
 export interface AddTeamResult extends ActionResult {
-  password?: string
   team_code?: string
 }
 
@@ -286,10 +283,9 @@ export async function addTeamManualAction(_prev: AddTeamResult, formData: FormDa
   const { data: codeClash } = await admin.from("teams").select("team_code").eq("team_code", teamCode).maybeSingle()
   if (codeClash) return { ok: false, error: `Team code ${teamCode} is already taken — pick another.` }
 
-  const password = genPassword(teamCode)
   const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
     email: leaderEmail,
-    password,
+    password: genPlaceholderPassword(),
     email_confirm: true,
     user_metadata: { team_code: teamCode, role: "team" },
   })
@@ -314,6 +310,7 @@ export async function addTeamManualAction(_prev: AddTeamResult, formData: FormDa
     leader_email: leaderEmail,
     auth_user_id: authUser.user.id,
     status: "registered",
+    password_set: false,
   })
   if (teamErr) {
     await admin.auth.admin.deleteUser(authUser.user.id).catch(() => {})
@@ -324,7 +321,11 @@ export async function addTeamManualAction(_prev: AddTeamResult, formData: FormDa
   await queueRosterChangeResync()
   revalidatePath("/admin/teams")
   revalidatePath("/admin/round1")
-  return { ok: true, team_code: teamCode, password, message: `Team ${teamCode} created. Login: ${leaderEmail}` }
+  return {
+    ok: true,
+    team_code: teamCode,
+    message: `Team ${teamCode} created. Tell ${leaderEmail} to go to /login and set their password — first login prompts them for it.`,
+  }
 }
 
 export async function setRollOpenAction(formData: FormData): Promise<void> {
@@ -373,12 +374,18 @@ export async function resetTeamPasswordAction(_prev: ResetPasswordResult, formDa
   const { data: team } = await admin.from("teams").select("auth_user_id, team_code, leader_email").eq("id", teamId).maybeSingle()
   if (!team?.auth_user_id) return { ok: false, error: "Team has no linked login." }
 
-  const password = genPassword(team.team_code)
-  const { error } = await admin.auth.admin.updateUserById(team.auth_user_id, { password })
+  // No password to generate or relay — just send them back through the
+  // self-serve "set your password" flow. Their team data (members,
+  // submissions, scores) is completely untouched; only the login credential
+  // resets, and only they ever know what the new one is.
+  const { error } = await admin.from("teams").update({ password_set: false }).eq("id", teamId)
   if (error) return { ok: false, error: error.message }
   await audit(admin, user, "team.reset_password", team.team_code)
   revalidatePath("/admin/teams")
-  return { ok: true, password, message: `New password for ${team.team_code} (${team.leader_email}):` }
+  return {
+    ok: true,
+    message: `Reset — tell ${team.leader_email} to go to /login/setup and create a new password. Their team data is untouched.`,
+  }
 }
 
 export async function deleteTeamAction(formData: FormData): Promise<void> {

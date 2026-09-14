@@ -20,7 +20,7 @@ export default async function AdminTeamsPage() {
   const psMap = new Map((statements ?? []).map((p) => [p.id, p.code]))
   const rows = teams ?? []
   const withPs = rows.filter((t) => t.problem_statement_id !== null).length
-  const withLogin = rows.filter((t) => t.auth_user_id !== null).length
+  const passwordSet = rows.filter((t) => t.password_set).length
 
   return (
     <div className="space-y-8">
@@ -33,7 +33,7 @@ export default async function AdminTeamsPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Teams" value={String(rows.length)} sub="Registered squads" />
         <StatCard label="On a problem" value={String(withPs)} sub="Rolled a problem statement" />
-        <StatCard label="With logins" value={String(withLogin)} sub="Auth accounts linked" />
+        <StatCard label="Password set" value={`${passwordSet}/${rows.length}`} sub="Leaders who've done first login" />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -44,7 +44,7 @@ export default async function AdminTeamsPage() {
           Import CSV
         </LinkButton>
         <DownloadCredentialsButton
-          teams={rows.filter((t) => t.auth_user_id !== null).map((t) => ({ team_code: t.team_code, team_name: t.team_name, leader_email: t.leader_email }))}
+          teams={rows.map((t) => ({ team_code: t.team_code, team_name: t.team_name, leader_email: t.leader_email, password_set: t.password_set }))}
         />
       </div>
 

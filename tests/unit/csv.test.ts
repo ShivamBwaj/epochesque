@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { parseRegistrationCsv, genPassword } from "@/lib/csv"
+import { parseRegistrationCsv, genPlaceholderPassword } from "@/lib/csv"
 
 const HEADERS = "Id,Name,Email,Ph_No,College,Payment Status,College Type,Team Id"
 
@@ -87,8 +87,13 @@ describe("parseRegistrationCsv", () => {
 })
 
 describe("helpers", () => {
-  it("genPassword builds a handover-friendly password from the team code", () => {
-    expect(genPassword("T-014")).toBe("Epoch@T-014")
-    expect(genPassword("ALPHA")).toBe("Epoch@ALPHA")
+  it("genPlaceholderPassword produces long, unique, never-guessable values", () => {
+    const seen = new Set<string>()
+    for (let i = 0; i < 200; i++) {
+      const pw = genPlaceholderPassword()
+      expect(pw).toMatch(/^[0-9a-f]{48}$/)
+      seen.add(pw)
+    }
+    expect(seen.size).toBe(200)
   })
 })

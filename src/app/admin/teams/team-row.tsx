@@ -4,9 +4,8 @@ import { useActionState, useState } from "react"
 import type { Team, TeamMember } from "@/lib/database.types"
 import { deleteTeamAction, resetTeamPasswordAction, updateTeamLeaderEmailAction } from "@/lib/actions/admin"
 import type { ActionResult, ResetPasswordResult } from "@/lib/actions/admin"
-import { CopyField } from "@/components/copy-field"
 import { SubmitButton } from "@/components/submit-button"
-import { StatusBadge } from "@/components/ui"
+import { Badge, StatusBadge } from "@/components/ui"
 
 const selectClass =
   "max-w-full truncate rounded-lg border border-white/[0.08] bg-surface/80 px-2.5 py-1.5 text-xs text-foreground focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/30 transition-colors"
@@ -59,6 +58,13 @@ export function TeamRow({ team, psCode }: { team: Team; psCode: string }) {
         ) : (
           <span className="break-all text-xs text-muted-foreground">{team.leader_email}</span>
         )}
+        <div className="mt-1">
+          {team.password_set ? (
+            <Badge tone="green">password set</Badge>
+          ) : (
+            <Badge tone="amber">awaiting first login</Badge>
+          )}
+        </div>
         {emailState.ok && emailState.message ? (
           <p className="mt-1 text-xs text-emerald-300">{emailState.message}</p>
         ) : null}
@@ -88,11 +94,9 @@ export function TeamRow({ team, psCode }: { team: Team; psCode: string }) {
               Delete
             </SubmitButton>
           </form>
-          {resetState.ok && resetState.password ? (
-            <div className="w-72 max-w-[90vw] space-y-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5">
-              <p className="text-xs text-emerald-300">{resetState.message ?? "New password:"}</p>
-              <CopyField value={resetState.password} label="password" />
-              <p className="text-[11px] text-muted/70">Shown once — copy it now.</p>
+          {resetState.ok && resetState.message ? (
+            <div className="w-72 max-w-[90vw] rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5">
+              <p className="text-xs text-emerald-300">{resetState.message}</p>
             </div>
           ) : null}
           {!resetState.ok && resetState.error ? <p className="text-xs text-red-300">{resetState.error}</p> : null}

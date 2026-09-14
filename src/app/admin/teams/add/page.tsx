@@ -17,7 +17,7 @@ export default async function AdminAddTeamPage() {
       <SectionHeading
         kicker="ON-SPOT REGISTRATION"
         title="Add a team manually"
-        description="For walk-in registrations. The leader's email becomes the login — a password is generated and shown once."
+        description="For walk-in registrations. The leader's email becomes the login — they set their own password at /login on first sign-in."
       />
       <AddTeamForm />
     </div>

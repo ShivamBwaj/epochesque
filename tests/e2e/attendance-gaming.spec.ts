@@ -43,6 +43,7 @@ test.beforeAll(async () => {
     leader_email: TEAM_EMAIL,
     auth_user_id: teamUserId,
     status: "registered",
+    password_set: true,
   })
   if (teamErr) {
     await admin.auth.admin.deleteUser(teamUserId).catch(() => {})
@@ -65,6 +66,7 @@ test.beforeAll(async () => {
     leader_email: TEAM2_EMAIL,
     auth_user_id: team2UserId,
     status: "registered",
+    password_set: true,
   })
   if (teamErr2) {
     await admin.auth.admin.deleteUser(team2UserId).catch(() => {})

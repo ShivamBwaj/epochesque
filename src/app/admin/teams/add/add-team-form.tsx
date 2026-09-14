@@ -20,14 +20,13 @@ export function AddTeamForm() {
     <div className="space-y-6">
       {state.error ? <Alert tone="error">{state.error}</Alert> : null}
 
-      {state.ok && state.password ? (
+      {state.ok && state.team_code ? (
         <Card className="p-5">
           <Alert tone="success">
-            {state.message} — give the password to the team leader now. It is shown only once (you can reset it later from the Teams page).
+            {state.message} No password to hand out — they go to <code className="font-mono text-accent-hover">/login</code>, enter their email, and set their own password on first sign-in.
           </Alert>
-          <div className="mt-4 space-y-3">
-            <CopyField value={state.team_code ?? ""} label="team code" />
-            <CopyField value={state.password} label="password" />
+          <div className="mt-4">
+            <CopyField value={state.team_code} label="team code" />
           </div>
           <div className="mt-4">
             <Button variant="secondary" onClick={() => window.location.reload()}>
