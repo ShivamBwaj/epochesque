@@ -13,7 +13,21 @@ export interface SubmitState {
   message?: string
 }
 
-const GITHUB_RE = /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$/
+const GITHUB_RE = /^https:\/\/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/
+
+// Teams paste this from wherever — no scheme, http, trailing .git, or a
+// /tree/branch, /blob/..., or ?query suffix should be a hard rejection at
+// hour 23 of the event. Normalize down to the bare repo URL before validating.
+function normalizeGithubUrl(raw: string): string | null {
+  let s = raw.trim()
+  if (!s) return null
+  if (!/^https?:\/\//i.test(s)) s = `https://${s}`
+  s = s.replace(/^http:\/\//i, "https://")
+  const m = GITHUB_RE.exec(s)
+  if (!m) return null
+  const repo = m[2].replace(/\.git$/i, "")
+  return `https://github.com/${m[1]}/${repo}`
+}
 
 export interface BookSlotResult {
   ok: boolean
@@ -149,8 +163,8 @@ export async function submitFinalAction(_prev: SubmitState, formData: FormData):
     return { error: "The final round deadline has passed. Submissions are closed." }
   }
 
-  const url = String(formData.get("url") ?? "").trim()
-  if (!GITHUB_RE.test(url)) return { error: "Enter a valid GitHub repository URL (https://github.com/user/repo)." }
+  const url = normalizeGithubUrl(String(formData.get("url") ?? ""))
+  if (!url) return { error: "Enter a valid GitHub repository URL (https://github.com/user/repo)." }
 
   const admin = createAdminClient()
   const { error } = await admin.from("submissions").upsert({

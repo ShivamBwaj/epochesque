@@ -11,6 +11,7 @@ export async function SiteHeader() {
         { href: "/speakers", label: "Speakers" },
         { href: "/oc", label: "OC" },
         { href: "/gallery", label: "Gallery" },
+        { href: "/leaderboard", label: "Leaderboard" },
       ]}
     />
   )

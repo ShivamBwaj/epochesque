@@ -388,6 +388,10 @@ export async function deleteTeamAction(formData: FormData): Promise<void> {
   if (!teamId) return
   const admin = createAdminClient()
   const { data: team } = await admin.from("teams").select("auth_user_id, team_code, problem_statement_id").eq("id", teamId).maybeSingle()
+  const { data: subs } = await admin.from("submissions").select("storage_path").eq("team_id", teamId)
+  for (const s of subs ?? []) {
+    if (s.storage_path) await admin.storage.from("submissions").remove([s.storage_path]).catch(() => {})
+  }
   await admin.from("teams").delete().eq("id", teamId)
   if (team?.problem_statement_id) {
     try {
@@ -517,7 +521,11 @@ export async function importScoresAction(_prev: ImportScoresResult, formData: Fo
   const codeToId = new Map(teams.map((t) => [t.team_code.toLowerCase(), t.id]))
 
   const errors: string[] = []
-  const rows: { team_id: string; round: string; total_score: number; notes: string }[] = []
+  // Keyed by team_id so a repeated team_code (copy-paste slip in the judges'
+  // export) doesn't reach Postgres twice in one upsert batch — ON CONFLICT
+  // can't affect the same row twice in a single statement, which would fail
+  // the whole import. Last occurrence wins; every duplicate is flagged.
+  const byTeamId = new Map<string, { team_id: string; round: string; total_score: number; notes: string }>()
   for (const r of parsed) {
     const id = codeToId.get(String(r.team_code).trim().toLowerCase())
     if (!id) {
@@ -529,8 +537,12 @@ export async function importScoresAction(_prev: ImportScoresResult, formData: Fo
       errors.push(`Invalid score for ${r.team_code}`)
       continue
     }
-    rows.push({ team_id: id, round, total_score: Math.round(score * 100) / 100, notes: String(r.notes ?? "").slice(0, 500) })
+    if (byTeamId.has(id)) {
+      errors.push(`Duplicate row for ${r.team_code} — only the last one in the file was used`)
+    }
+    byTeamId.set(id, { team_id: id, round, total_score: Math.round(score * 100) / 100, notes: String(r.notes ?? "").slice(0, 500) })
   }
+  const rows = [...byTeamId.values()]
 
   if (rows.length === 0) {
     return { ok: false, errors, error: "No valid rows to import." }
