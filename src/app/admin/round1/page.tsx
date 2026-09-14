@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { requireAdminPage } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { Card, EmptyState, LinkButton, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
+import { CleanupUploadsButton } from "./cleanup-uploads-button"
 
 export const dynamic = "force-dynamic"
 
@@ -53,10 +54,11 @@ export default async function AdminRound1Page() {
         <StatCard label="Missing" value={String(rows.length - submittedCount)} sub="No deck yet" />
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <LinkButton href="/admin/scoring?round=round1" size="sm">
           Enter OC Round 1 scores →
         </LinkButton>
+        <CleanupUploadsButton />
       </div>
 
       {rows.length === 0 ? (

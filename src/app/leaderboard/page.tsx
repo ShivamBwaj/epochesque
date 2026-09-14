@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
+import { requireAdminPage } from "@/lib/auth"
 import { Badge, Card, EmptyState, SectionHeading } from "@/components/ui"
 import type { Json, LeaderboardEntry, WinnersEntry } from "@/lib/database.types"
 
@@ -7,7 +8,8 @@ export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Leaderboard",
-  description: "Round 1, quiz, and final round scores, plus the winners' podium.",
+  description: "Round 1 and final round scores, plus the winners' podium — admin view.",
+  robots: { index: false, follow: false },
 }
 
 const MEDALS: Record<number, { icon: string; label: string; border: string; tint: string }> = {
@@ -130,6 +132,7 @@ function RoundBoard({
 }
 
 export default async function LeaderboardPage() {
+  await requireAdminPage()
   const supabase = await createClient()
   const [round1Res, round2Res, finalRes, winnersRes] = await Promise.all([
     supabase.from("leaderboard_round1_public").select("*"),

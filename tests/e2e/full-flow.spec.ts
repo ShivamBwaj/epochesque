@@ -31,8 +31,7 @@ test("public pages render", async ({ page }) => {
   await expect(page.locator("body")).toContainText("Speakers")
 
   await page.goto("/leaderboard")
-  await expect(page).not.toHaveURL(/\/login/)
-  await expect(page.locator("body")).toContainText("Round 1")
+  await page.waitForURL("**/login**")
 
   await page.goto("/gallery")
   await expect(page.locator("body")).toContainText("Photos drop after the event")

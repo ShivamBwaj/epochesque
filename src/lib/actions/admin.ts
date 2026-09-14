@@ -403,6 +403,45 @@ export async function deleteTeamAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/teams")
 }
 
+export interface CleanupUploadsResult extends ActionResult {
+  removed?: number
+}
+
+// Round 1 deck uploads go straight to storage before the DB row is written
+// (begin-upload -> client PUT -> finalize). If a team closes the tab after
+// the PUT but before finalizing, or the deadline passes in that gap, the
+// file is stranded in storage with nothing pointing to it. Sweep round1/
+// for objects no submissions row references, and remove them.
+export async function cleanupOrphanedUploadsAction(): Promise<CleanupUploadsResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+  const admin = createAdminClient()
+
+  const { data: teamFolders, error: listErr } = await admin.storage.from("submissions").list("round1", { limit: 1000 })
+  if (listErr) return { ok: false, error: listErr.message }
+
+  const { data: subs } = await admin.from("submissions").select("storage_path").eq("round", "round1").not("storage_path", "is", null)
+  const referenced = new Set((subs ?? []).map((s) => s.storage_path))
+
+  let removed = 0
+  for (const folder of teamFolders ?? []) {
+    if (!folder.name) continue
+    const prefix = `round1/${folder.name}`
+    const { data: files } = await admin.storage.from("submissions").list(prefix, { limit: 1000 })
+    for (const f of files ?? []) {
+      if (!f.name) continue
+      const fullPath = `${prefix}/${f.name}`
+      if (referenced.has(fullPath)) continue
+      const { error } = await admin.storage.from("submissions").remove([fullPath])
+      if (!error) removed++
+    }
+  }
+
+  await audit(admin, user, "submissions.cleanup_orphans", "round1", { removed })
+  revalidatePath("/admin/round1")
+  return { ok: true, removed, message: removed > 0 ? `Removed ${removed} orphaned file${removed === 1 ? "" : "s"}.` : "No orphaned files found." }
+}
+
 export async function upsertProblemStatementAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireAdminAction()
   if (!user) return { ok: false, error: "Admins only." }
@@ -461,38 +500,78 @@ export async function saveScoresAction(_prev: ActionResult, formData: FormData):
     return { ok: false, error: "This round's leaderboard is live. Unpublish it before editing scores — corrections must never happen behind a live leaderboard." }
   }
 
-  const dirtyIds = new Set(
-    String(formData.get("dirtyIds") ?? "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
-  )
-
-  const { data: teams } = await admin.from("teams").select("id").order("team_code")
-  if (!teams) return { ok: false, error: "Could not load teams." }
-
-  const rows: { team_id: string; round: string; total_score: number; notes: string }[] = []
-  for (const t of teams) {
-    if (dirtyIds.size > 0 && !dirtyIds.has(t.id)) continue
-    const raw = String(formData.get(`score_${t.id}`) ?? "").trim()
-    const notes = String(formData.get(`notes_${t.id}`) ?? "").trim().slice(0, 500)
-    if (!raw) continue
-    const score = Number(raw)
-    if (!Number.isFinite(score) || score < 0 || score > 10000) {
-      return { ok: false, error: "Invalid score for a team (must be 0–10000)." }
-    }
-    rows.push({ team_id: t.id, round, total_score: Math.round(score * 100) / 100, notes })
+  // Field-level dirty set ("<teamId>::score" / "<teamId>::notes"), not whole
+  // rows: a judge who only edited notes must never resend the score input's
+  // page-load snapshot — another judge may have saved a newer score for that
+  // team since this page loaded, and resending the stale value would
+  // silently overwrite it (a real lost-update race under concurrent judging).
+  const dirtyByTeam = new Map<string, Set<"score" | "notes">>()
+  for (const entry of String(formData.get("dirtyFields") ?? "").split(",")) {
+    const [teamId, field] = entry.split("::")
+    if (!teamId || (field !== "score" && field !== "notes")) continue
+    if (!dirtyByTeam.has(teamId)) dirtyByTeam.set(teamId, new Set())
+    dirtyByTeam.get(teamId)!.add(field)
   }
 
-  if (rows.length === 0) {
+  if (dirtyByTeam.size === 0) {
     return { ok: true, message: "Nothing to save — edit a score or notes first." }
   }
 
-  const { error } = await admin.from("scores").upsert(rows, { onConflict: "team_id,round" })
-  if (error) return { ok: false, error: error.message }
-  await audit(admin, user, "scores.save", round, { count: rows.length })
+  const { data: existingScores } = await admin
+    .from("scores")
+    .select("team_id, total_score, notes")
+    .eq("round", round)
+    .in("team_id", [...dirtyByTeam.keys()])
+  const existingByTeam = new Map((existingScores ?? []).map((s) => [s.team_id, s]))
+
+  let saved = 0
+  for (const [teamId, fields] of dirtyByTeam) {
+    const existingRow = existingByTeam.get(teamId)
+
+    let total_score: number | undefined
+    if (fields.has("score")) {
+      const raw = String(formData.get(`score_${teamId}`) ?? "").trim()
+      if (raw) {
+        const score = Number(raw)
+        if (!Number.isFinite(score) || score < 0 || score > 10000) {
+          return { ok: false, error: "Invalid score for a team (must be 0–10000)." }
+        }
+        total_score = Math.round(score * 100) / 100
+      }
+    }
+    const notes = fields.has("notes") ? String(formData.get(`notes_${teamId}`) ?? "").trim().slice(0, 500) : undefined
+
+    if (existingRow) {
+      // Update only the columns this judge actually touched — the other
+      // column is left exactly as-is in the DB, never re-sent stale.
+      const patch: { total_score?: number; notes?: string } = {}
+      if (total_score !== undefined) patch.total_score = total_score
+      if (notes !== undefined) patch.notes = notes
+      if (Object.keys(patch).length === 0) continue
+      const { error } = await admin.from("scores").update(patch).eq("team_id", teamId).eq("round", round)
+      if (error) return { ok: false, error: error.message }
+      saved++
+    } else {
+      // No row yet for this team — a score is required to create one; notes
+      // alone can't, so tell the judge instead of silently dropping the edit.
+      if (total_score === undefined) {
+        return { ok: false, error: "Enter a score before saving notes for a team that hasn't been scored yet." }
+      }
+      const { error } = await admin
+        .from("scores")
+        .upsert({ team_id: teamId, round, total_score, notes: notes ?? "" }, { onConflict: "team_id,round" })
+      if (error) return { ok: false, error: error.message }
+      saved++
+    }
+  }
+
+  if (saved === 0) {
+    return { ok: true, message: "Nothing to save — edit a score or notes first." }
+  }
+
+  await audit(admin, user, "scores.save", round, { count: saved })
   revalidatePath("/admin/scoring")
-  return { ok: true, message: `Saved ${rows.length} score${rows.length === 1 ? "" : "s"} for ${round}.` }
+  return { ok: true, message: `Saved ${saved} score${saved === 1 ? "" : "s"} for ${round}.` }
 }
 
 export async function importScoresAction(_prev: ImportScoresResult, formData: FormData): Promise<ImportScoresResult> {

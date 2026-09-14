@@ -27,20 +27,30 @@ export function ScoringGrid({
   const [importInvalid, setImportInvalid] = useState<{ line: number; text: string; reason: string }[]>([])
   const [importError, setImportError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const [dirty, setDirty] = useState<string[]>([])
+  // Field-level dirty tracking, not row-level: if a judge only edits notes,
+  // we must not also resend the score input's page-load snapshot value —
+  // another judge may have saved a newer score for that same team in the
+  // meantime, and resending the stale one would silently clobber it.
+  const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set())
   const [saveState, setSaveState] = useState<ActionResult>({ ok: false })
   const scored = teams.filter((t) => t.id in existing).length
-  const dirtyCount = dirty.length
+  const dirtyTeamCount = new Set([...dirtyFields].map((k) => k.split("::")[0])).size
 
-  function markDirty(teamId: string) {
-    setDirty((prev) => (prev.includes(teamId) ? prev : [...prev, teamId]))
+  function markDirty(teamId: string, field: "score" | "notes") {
+    setDirtyFields((prev) => {
+      const key = `${teamId}::${field}`
+      if (prev.has(key)) return prev
+      const next = new Set(prev)
+      next.add(key)
+      return next
+    })
   }
 
   async function handleSave(fd: FormData) {
     const res = await saveScoresAction({ ok: false }, fd)
     setSaveState(res)
     if (res.ok) {
-      setDirty([])
+      setDirtyFields(new Set())
     }
   }
 
@@ -195,7 +205,7 @@ export function ScoringGrid({
       ) : (
         <form action={handleSave}>
           <input type="hidden" name="round" value={round} />
-          <input type="hidden" name="dirtyIds" value={dirty.join(",")} />
+          <input type="hidden" name="dirtyFields" value={[...dirtyFields].join(",")} />
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -224,7 +234,7 @@ export function ScoringGrid({
                             max={10000}
                             name={`score_${t.id}`}
                             defaultValue={ex ? String(ex.total_score) : ""}
-                            onChange={() => markDirty(t.id)}
+                            onChange={() => markDirty(t.id, "score")}
                             className="w-24"
                             placeholder="—"
                             aria-label={`Score for ${t.team_code}`}
@@ -235,7 +245,7 @@ export function ScoringGrid({
                             name={`notes_${t.id}`}
                             defaultValue={ex?.notes ?? ""}
                             maxLength={500}
-                            onChange={() => markDirty(t.id)}
+                            onChange={() => markDirty(t.id, "notes")}
                             placeholder="Judge notes (shown on the leaderboard)"
                             aria-label={`Notes for ${t.team_code}`}
                           />
@@ -253,7 +263,7 @@ export function ScoringGrid({
             </SubmitButton>
             <span className="text-xs text-muted">
               {scored}/{teams.length} scored
-              {dirtyCount > 0 ? ` · ${dirtyCount} unsaved edit${dirtyCount === 1 ? "" : "s"}` : ""}
+              {dirtyTeamCount > 0 ? ` · ${dirtyTeamCount} unsaved edit${dirtyTeamCount === 1 ? "" : "s"}` : ""}
             </span>
             <span className="text-xs text-muted/70">
               Only rows you changed are saved — several people can score different teams at the same time.
