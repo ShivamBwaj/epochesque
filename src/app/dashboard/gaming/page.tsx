@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { requireTeamPage } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getEventFlags } from "@/lib/settings"
 import { gameLabel, GAMES } from "@/lib/database.types"
 import { SectionHeading, Alert } from "@/components/ui"
 import { GamingPicker } from "./gaming-picker"
@@ -14,7 +15,10 @@ export const metadata: Metadata = {
 export default async function DashboardGamingPage() {
   const { team } = await requireTeamPage()
   const admin = createAdminClient()
-  const { data: slots } = await admin.from("game_slots").select("*").order("slot_index")
+  const [{ data: slots }, flags] = await Promise.all([
+    admin.from("game_slots").select("*").order("slot_index"),
+    getEventFlags(),
+  ])
 
   const myBooking = (slots ?? []).find((s) => s.taken_by_team_id === team.id) ?? null
   const slotCount = (slots ?? []).length
@@ -29,6 +33,8 @@ export default async function DashboardGamingPage() {
 
       {slotCount === 0 ? (
         <Alert tone="info">Gaming slots aren&apos;t set up yet. The organizers will open them soon.</Alert>
+      ) : !flags.gamingOpen && !myBooking ? (
+        <Alert tone="info">Booking isn&apos;t open yet — the organizers will flip it on soon. Check back here.</Alert>
       ) : (
         <GamingPicker
           games={GAMES.map((game) => ({

@@ -23,15 +23,17 @@ export const getEventTiming = cache(async (): Promise<EventTiming> => {
 export interface EventFlags {
   rollOpen: boolean
   finalOpen: boolean
+  gamingOpen: boolean
 }
 
 export const getEventFlags = cache(async (): Promise<EventFlags> => {
   const supabase = await createClient()
-  const { data } = await supabase.from("event_settings").select("key, value").in("key", ["roll_open", "final_open"])
+  const { data } = await supabase.from("event_settings").select("key, value").in("key", ["roll_open", "final_open", "gaming_open"])
   const map = new Map((data ?? []).map((r) => [r.key, r.value]))
   return {
     rollOpen: map.get("roll_open") === true,
     finalOpen: map.get("final_open") === true,
+    gamingOpen: map.get("gaming_open") === true,
   }
 })
 

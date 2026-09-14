@@ -1,8 +1,10 @@
 import type { Metadata } from "next"
 import { requireAdminPage } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { clearGameSlotAction } from "@/lib/actions/admin"
+import { getEventFlags } from "@/lib/settings"
+import { clearGameSlotAction, setGamingOpenAction } from "@/lib/actions/admin"
 import { gameLabel, type GameSlot } from "@/lib/database.types"
+import { SubmitButton } from "@/components/submit-button"
 import { Badge, Card, EmptyState, SectionHeading, StatCard } from "@/components/ui"
 
 export const dynamic = "force-dynamic"
@@ -14,9 +16,10 @@ export const metadata: Metadata = {
 export default async function AdminGamingPage() {
   await requireAdminPage()
   const admin = createAdminClient()
-  const [{ data: slots }, { data: teams }] = await Promise.all([
+  const [{ data: slots }, { data: teams }, flags] = await Promise.all([
     admin.from("game_slots").select("*").order("slot_index"),
     admin.from("teams").select("id, team_code, team_name"),
+    getEventFlags(),
   ])
   const teamMap = new Map((teams ?? []).map((t) => [t.id, t]))
 
@@ -42,6 +45,34 @@ export default async function AdminGamingPage() {
         title="Gaming Slots"
         description="Tekken and FIFA, 15-minute slots from 11:00 to 14:00. One team per slot, one slot per team — bookings are atomic, no double-booking possible."
       />
+
+      <Card className={`p-5 ${flags.gamingOpen ? "ring-glow" : ""}`}>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="hud-label">🎮 SLOT BOOKING</p>
+            <div className="mt-2 flex items-center gap-2">
+              {flags.gamingOpen ? (
+                <Badge tone="green">open — teams can book now</Badge>
+              ) : (
+                <Badge tone="slate">closed — teams can&apos;t book yet</Badge>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Flips slot booking on for every team&apos;s dashboard. Leave it off until you&apos;re ready for the rush.
+            </p>
+          </div>
+          <form action={setGamingOpenAction}>
+            <input type="hidden" name="open" value={flags.gamingOpen ? "false" : "true"} />
+            <SubmitButton
+              variant={flags.gamingOpen ? "secondary" : "primary"}
+              confirm={flags.gamingOpen ? "Close gaming slot booking?" : "Open gaming slot booking for ALL teams?"}
+              pendingText="Working…"
+            >
+              {flags.gamingOpen ? "Close booking" : "Open booking"}
+            </SubmitButton>
+          </form>
+        </div>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Slots booked" value={`${booked}/${allSlots.length}`} sub="across both games" />

@@ -22,6 +22,7 @@ const MEMBERS = [
 let teamUserId = ""
 let team2UserId = ""
 let startedAt = ""
+let gamingWasOpen = false
 
 test.beforeAll(async () => {
   startedAt = new Date().toISOString()
@@ -71,6 +72,11 @@ test.beforeAll(async () => {
   }
 
   await admin.from("leaderboard_visibility").upsert({ round: "round1", is_published: false, published_at: null }, { onConflict: "round" })
+
+  // Slot booking is gated behind the admin "gaming_open" toggle — force it on
+  // for this run so the booking test below doesn't get rejected.
+  gamingWasOpen = (await admin.from("event_settings").select("value").eq("key", "gaming_open").maybeSingle()).data?.value === true
+  await admin.from("event_settings").upsert({ key: "gaming_open", value: true as never }, { onConflict: "key" })
 })
 
 test.afterAll(async () => {
@@ -79,6 +85,7 @@ test.afterAll(async () => {
   await admin.auth.admin.deleteUser(team2UserId).catch(() => {})
   await admin.from("leaderboard_visibility").upsert({ round: "round1", is_published: false, published_at: null }, { onConflict: "round" })
   await admin.from("admin_audit").delete().gte("created_at", startedAt)
+  await admin.from("event_settings").upsert({ key: "gaming_open", value: gamingWasOpen as never }, { onConflict: "key" })
 })
 
 async function login(page: Page, email: string, password: string) {

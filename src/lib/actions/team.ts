@@ -25,6 +25,9 @@ export async function bookGameSlotAction(slotId: string): Promise<BookSlotResult
   const viewer = await getViewer()
   if (!viewer || viewer.role !== "team" || !viewer.team) return { ok: false, error: "Not signed in as a team." }
 
+  const flags = await getEventFlags()
+  if (!flags.gamingOpen) return { ok: false, error: "Gaming slots aren't open yet — wait for the organizers to open booking." }
+
   const supabase = await createClient()
   const { data, error } = await supabase.rpc("book_game_slot", { p_slot_id: slotId })
   if (error) {

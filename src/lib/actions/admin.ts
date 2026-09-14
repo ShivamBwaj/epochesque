@@ -351,6 +351,18 @@ export async function setFinalOpenAction(formData: FormData): Promise<void> {
   revalidatePath("/dashboard")
 }
 
+export async function setGamingOpenAction(formData: FormData): Promise<void> {
+  const user = await requireAdminAction()
+  if (!user) return
+  const open = String(formData.get("open") ?? "") === "true"
+  const admin = createAdminClient()
+  await admin.from("event_settings").upsert({ key: "gaming_open", value: open as never }, { onConflict: "key" })
+  await audit(admin, user, open ? "gaming.open" : "gaming.close", undefined, undefined)
+  revalidatePath("/admin/gaming")
+  revalidatePath("/dashboard/gaming")
+  revalidatePath("/dashboard")
+}
+
 export async function resetTeamPasswordAction(_prev: ResetPasswordResult, formData: FormData): Promise<ResetPasswordResult> {
   const user = await requireAdminAction()
   if (!user) return { ok: false, error: "Admins only." }
