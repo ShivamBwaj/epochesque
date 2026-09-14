@@ -136,7 +136,7 @@ test("attendance: mark whole team, tweak one member, days independent, CSV butto
 
   await expect(page.locator('button:has-text("Download CSV")')).toBeVisible()
   if (!process.env.ATTENDANCE_SHEETS_WEBHOOK_URL) {
-    await expect(page.locator("body")).toContainText("SHEET BACKUP OFF")
+    await expect(page.locator("body")).toContainText("Connect Google Sheet")
   }
 
   const d1 = await attendanceRows(1)

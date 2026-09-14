@@ -54,6 +54,12 @@ export type Database = {
         Update: { caption?: string; created_at?: string; id?: string; sort_order?: number; storage_path?: string }
         Relationships: []
       }
+      integration_secrets: {
+        Row: { key: string; value: string; updated_at: string }
+        Insert: { key: string; value: string; updated_at?: string }
+        Update: { key?: string; value?: string; updated_at?: string }
+        Relationships: []
+      }
       people: {
         Row: { created_at: string; id: string; is_published: boolean; kind: string; name: string; photo_path: string | null; role: string; sort_order: number; tagline: string; tags: Json; updated_at: string }
         Insert: { created_at?: string; id?: string; is_published?: boolean; kind: string; name: string; photo_path?: string | null; role?: string; sort_order?: number; tagline?: string; tags?: Json; updated_at?: string }

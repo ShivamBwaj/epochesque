@@ -1,14 +1,18 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import {
+  connectSheetsWebhookAction,
+  disconnectSheetsWebhookAction,
   fetchAttendanceStateAction,
   resyncAttendanceToSheetsAction,
   setAttendanceMemberAction,
   setAttendanceTeamAction,
   type AttendanceMemberState,
+  type ConnectSheetsResult,
 } from "@/lib/actions/attendance"
+import { SubmitButton } from "@/components/submit-button"
 import { Alert, Badge, Card } from "@/components/ui"
 
 const POLL_MS = 2500
@@ -35,7 +39,17 @@ export function AttendanceBoard({
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false)
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
+  const [manuallyDisconnected, setManuallyDisconnected] = useState(false)
+  const [showConnectForm, setShowConnectForm] = useState(false)
+  const [connectState, connectAction] = useActionState<ConnectSheetsResult, FormData>(connectSheetsWebhookAction, { ok: false })
+  const connected = !manuallyDisconnected && (sheetsConfigured || connectState.ok)
   const pendingRef = useRef<Map<string, boolean>>(new Map())
+
+  async function disconnectSheet() {
+    if (!window.confirm("Disconnect this Google Sheet? Live sync stops until you connect one again.")) return
+    setManuallyDisconnected(true)
+    await disconnectSheetsWebhookAction()
+  }
 
   const applyServerState = useCallback((server: AttendanceMemberState[]) => {
     const pending = pendingRef.current
@@ -215,25 +229,68 @@ export function AttendanceBoard({
         >
           ⬇ Download CSV ({day === 1 ? "Day 1" : "Day 2"})
         </button>
-        {sheetsConfigured ? (
+        {connected ? (
+          <>
+            <button
+              type="button"
+              onClick={resyncSheet}
+              disabled={syncing}
+              className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
+            >
+              {syncing ? "Syncing…" : "⟳ Re-sync Google Sheet"}
+            </button>
+            <button
+              type="button"
+              onClick={disconnectSheet}
+              className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground"
+              title="Disconnect the Google Sheet"
+            >
+              Disconnect sheet
+            </button>
+          </>
+        ) : (
           <button
             type="button"
-            onClick={resyncSheet}
-            disabled={syncing}
-            className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
+            onClick={() => setShowConnectForm((v) => !v)}
+            className="rounded-full border border-accent/30 bg-accent-soft px-4 py-2 text-xs text-accent-hover transition hover:bg-accent-soft/80"
           >
-            {syncing ? "Syncing…" : "⟳ Re-sync Google Sheet"}
+            🔗 Connect Google Sheet
           </button>
-        ) : (
-          <Badge tone="amber">SHEET BACKUP OFF — set ATTENDANCE_SHEETS_WEBHOOK_URL</Badge>
         )}
         <span className="ml-auto font-mono text-xs text-muted/70">
           {counts.present}/{counts.total} PRESENT · LIVE SYNC {POLL_MS / 1000}s
         </span>
       </div>
 
+      {showConnectForm && !connected ? (
+        <Card className="p-4">
+          <form action={connectAction} className="flex flex-wrap items-end gap-3">
+            <div className="min-w-0 flex-1">
+              <label htmlFor="webhookUrl" className="mb-1 block text-xs font-medium text-muted-foreground">
+                Google Apps Script web app URL
+              </label>
+              <input
+                id="webhookUrl"
+                name="webhookUrl"
+                type="url"
+                required
+                placeholder="https://script.google.com/macros/s/.../exec"
+                className="w-full rounded-lg border border-white/[0.08] bg-surface/80 px-3 py-2 text-sm text-foreground placeholder:text-muted/50 focus:border-accent/50 focus:outline-none"
+              />
+            </div>
+            <SubmitButton pendingText="Connecting…">Connect</SubmitButton>
+          </form>
+          {connectState.error ? <p className="mt-2 text-xs text-red-400">{connectState.error}</p> : null}
+          <p className="mt-2 text-xs text-muted/60">
+            Deploy the sheet&apos;s Apps Script as a web app (Execute as: Me, Access: Anyone), paste the /exec URL here. See{" "}
+            <code className="text-muted-foreground">docs/attendance-google-sheet.md</code> for the exact script to paste.
+          </p>
+        </Card>
+      ) : null}
+
       {error ? <Alert tone="error">{error}</Alert> : null}
       {syncMsg ? <Alert tone={syncMsg.startsWith("Sheet re-synced") ? "success" : "error"}>{syncMsg}</Alert> : null}
+      {connectState.ok && connectState.message ? <Alert tone="success">{connectState.message}</Alert> : null}
 
       {groups.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/[0.10] px-6 py-14 text-center">

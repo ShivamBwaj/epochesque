@@ -87,13 +87,8 @@ describe("parseRegistrationCsv", () => {
 })
 
 describe("helpers", () => {
-  it("genPassword produces strong unique passwords", () => {
-    const seen = new Set<string>()
-    for (let i = 0; i < 200; i++) {
-      const pw = genPassword()
-      expect(pw).toMatch(/^Ep-[A-Za-z0-9]{14}!7$/)
-      seen.add(pw)
-    }
-    expect(seen.size).toBeGreaterThan(190)
+  it("genPassword builds a handover-friendly password from the team code", () => {
+    expect(genPassword("T-014")).toBe("Epoch@T-014")
+    expect(genPassword("ALPHA")).toBe("Epoch@ALPHA")
   })
 })

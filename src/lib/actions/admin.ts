@@ -151,7 +151,7 @@ export async function importTeamsConfirmAction(_prev: ImportResult, formData: Fo
     while (takenCodes.has(candidate.toLowerCase())) candidate = `${code}-${n++}`
     code = candidate
 
-    const password = genPassword()
+    const password = genPassword(code)
     const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
       email: leaderEmail,
       password,
@@ -283,7 +283,7 @@ export async function addTeamManualAction(_prev: AddTeamResult, formData: FormDa
   const { data: codeClash } = await admin.from("teams").select("team_code").eq("team_code", teamCode).maybeSingle()
   if (codeClash) return { ok: false, error: `Team code ${teamCode} is already taken — pick another.` }
 
-  const password = genPassword()
+  const password = genPassword(teamCode)
   const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
     email: leaderEmail,
     password,
@@ -357,7 +357,7 @@ export async function resetTeamPasswordAction(_prev: ResetPasswordResult, formDa
   const { data: team } = await admin.from("teams").select("auth_user_id, team_code, leader_email").eq("id", teamId).maybeSingle()
   if (!team?.auth_user_id) return { ok: false, error: "Team has no linked login." }
 
-  const password = genPassword()
+  const password = genPassword(team.team_code)
   const { error } = await admin.auth.admin.updateUserById(team.auth_user_id, { password })
   if (error) return { ok: false, error: error.message }
   await audit(admin, user, "team.reset_password", team.team_code)

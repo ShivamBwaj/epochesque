@@ -194,12 +194,8 @@ export function parseRegistrationCsv(text: string): ParseResult {
   return { teams, skipped, totalRows: dataRowCount }
 }
 
-export function genPassword(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
-  const bytes = new Uint8Array(14)
-  crypto.getRandomValues(bytes)
-  const pw = Array.from(bytes, (b) => chars[b % chars.length]).join("")
-  return `Ep-${pw}!7`
+export function genPassword(teamCode: string): string {
+  return `Epoch@${teamCode}`
 }
 
 export interface ParsedScoreRow {

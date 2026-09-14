@@ -5,7 +5,7 @@ import { after } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser, isAdmin } from "@/lib/auth"
 import { memberKeyOf, type TeamMember } from "@/lib/database.types"
-import { pushAttendanceToSheets, sheetsWebhookConfigured, type SheetsAttendanceRow } from "@/lib/sheets"
+import { pushAttendanceToSheets, setSheetsWebhookUrl, sheetsWebhookConfigured, type SheetsAttendanceRow } from "@/lib/sheets"
 
 export interface AttendanceMemberState {
   teamId: string
@@ -89,7 +89,7 @@ function memberRows(
 }
 
 function queueSheetsPush(type: "attendance.write" | "attendance.resync", day: number, rows: SheetsAttendanceRow[]) {
-  if (!sheetsWebhookConfigured() || rows.length === 0) return
+  if (rows.length === 0) return
   after(async () => {
     await pushAttendanceToSheets(type, day, rows)
   })
@@ -189,7 +189,7 @@ export async function resyncAttendanceToSheetsAction(day: number): Promise<Atten
   const user = await requireAdminAction()
   if (!user) return { ok: false, error: "Admins only." }
   if (!validDay(day)) return { ok: false, error: "Invalid day." }
-  if (!sheetsWebhookConfigured()) return { ok: false, error: "Google Sheet webhook is not configured (ATTENDANCE_SHEETS_WEBHOOK_URL)." }
+  if (!(await sheetsWebhookConfigured())) return { ok: false, error: "No Google Sheet connected yet — connect one above." }
 
   const state = await buildState(day)
   const rows: SheetsAttendanceRow[] = (state.members ?? []).map((m) => ({
@@ -216,4 +216,84 @@ export async function resyncAttendanceToSheetsAction(day: number): Promise<Atten
 
   revalidatePath("/admin/attendance")
   return { ok: true }
+}
+
+export interface ConnectSheetsResult {
+  ok: boolean
+  error?: string
+  message?: string
+}
+
+export async function connectSheetsWebhookAction(_prev: ConnectSheetsResult, formData: FormData): Promise<ConnectSheetsResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+
+  const url = String(formData.get("webhookUrl") ?? "").trim()
+  if (!url) return { ok: false, error: "Paste the Apps Script web app URL first." }
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(url)) {
+    return { ok: false, error: "That doesn't look like a Google Apps Script web app URL (should end in /exec)." }
+  }
+
+  // Test it before saving: push a zero-row-safe resync isn't possible (rows
+  // required), so we push day 1's current state as the connectivity check —
+  // this also means "Connect" doubles as an immediate first sync.
+  const admin = createAdminClient()
+  const { data: teams } = await admin.from("teams").select("id, team_code, team_name, members").order("team_code")
+  const { data: attRows } = await admin.from("attendance").select("team_id, member_key, is_present").eq("day", 1)
+  const presentSet = new Set((attRows ?? []).filter((r) => r.is_present).map((r) => `${r.team_id}|${r.member_key}`))
+  const rows: SheetsAttendanceRow[] = []
+  for (const t of teams ?? []) {
+    const list = Array.isArray(t.members) ? (t.members as unknown as TeamMember[]) : []
+    for (const m of list) {
+      const key = memberKeyOf(m)
+      rows.push({
+        team_code: t.team_code,
+        team_name: t.team_name,
+        member_key: key,
+        name: m.name ?? "",
+        reg_no: m.member_id ?? "",
+        present: presentSet.has(`${t.id}|${key}`),
+        marked_at: new Date().toISOString(),
+      })
+    }
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "attendance.resync", day: 1, rows }),
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!res.ok) return { ok: false, error: `Sheet did not confirm (HTTP ${res.status}). Check the Apps Script deployment (Execute as: Me, Access: Anyone) and try again.` }
+  } catch {
+    return { ok: false, error: "Could not reach that URL. Check it's the deployed web app URL and try again." }
+  }
+
+  await setSheetsWebhookUrl(url)
+  await admin.from("admin_audit").insert({
+    actor_user_id: user.id,
+    actor_email: user.email ?? "",
+    action: "attendance.sheets_connect",
+    target: "webhook",
+    details: {} as never,
+  }).then(() => undefined, () => undefined)
+
+  revalidatePath("/admin/attendance")
+  return { ok: true, message: "Connected — Day 1 synced. Every tick now mirrors live." }
+}
+
+export async function disconnectSheetsWebhookAction(): Promise<void> {
+  const user = await requireAdminAction()
+  if (!user) return
+  await setSheetsWebhookUrl(null)
+  const admin = createAdminClient()
+  await admin.from("admin_audit").insert({
+    actor_user_id: user.id,
+    actor_email: user.email ?? "",
+    action: "attendance.sheets_disconnect",
+    target: "webhook",
+    details: {} as never,
+  }).then(() => undefined, () => undefined)
+  revalidatePath("/admin/attendance")
 }

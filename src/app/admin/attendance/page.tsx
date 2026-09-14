@@ -20,7 +20,7 @@ export default async function AdminAttendancePage({
   const sp = await searchParams
   const day = sp.day === "2" ? 2 : 1
 
-  const state = await fetchAttendanceStateAction(day)
+  const [state, sheetsConfigured] = await Promise.all([fetchAttendanceStateAction(day), sheetsWebhookConfigured()])
   const members: AttendanceMemberState[] = state.members ?? []
   const present = members.filter((m) => m.present).length
   const teams = new Map<string, { code: string; name: string; present: number; total: number }>()
@@ -47,7 +47,7 @@ export default async function AdminAttendancePage({
         <StatCard label="Full teams" value={String(fullTeams)} sub={`of ${teams.size} teams, all present`} />
       </div>
 
-      <AttendanceBoard key={day} day={day} initialMembers={members} sheetsConfigured={sheetsWebhookConfigured()} />
+      <AttendanceBoard key={day} day={day} initialMembers={members} sheetsConfigured={sheetsConfigured} />
     </div>
   )
 }
