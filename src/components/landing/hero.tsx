@@ -12,12 +12,12 @@ export function Hero({ eventStart }: { eventStart: string | null }) {
     <AuroraBackground className="!bg-background overflow-hidden min-h-[100dvh]">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent z-10" />
 
-      <div className="relative z-10 max-w-[1200px] mx-auto px-6 w-full pt-36 pb-20 flex flex-col items-center text-center">
+      <div className="relative z-10 max-w-[1200px] mx-auto px-6 w-full pt-24 pb-10 sm:pt-28 sm:pb-12 flex flex-col items-center text-center">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1"
+          className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1"
         >
           <span className="relative flex h-1.5 w-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
@@ -32,7 +32,7 @@ export function Hero({ eventStart }: { eventStart: string | null }) {
           initial={{ opacity: 0, y: 32 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-          className="text-[clamp(48px,9vw,120px)] font-semibold leading-[0.98] tracking-[-0.03em] mb-8"
+          className="text-[clamp(38px,7vw,96px)] font-semibold leading-[0.98] tracking-[-0.03em] mb-5"
         >
           <span
             className="text-gradient block"
@@ -46,9 +46,9 @@ export function Hero({ eventStart }: { eventStart: string | null }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-8"
+          className="mb-5"
         >
-          <p className="text-[clamp(24px,4vw,44px)] font-medium leading-tight tracking-tight text-foreground/90">
+          <p className="text-[clamp(20px,3.2vw,36px)] font-medium leading-tight tracking-tight text-foreground/90">
             You don&apos;t choose your problem.{" "}
             <span className="text-accent italic" style={{ fontFamily: "var(--font-display)" }}>
               You <RotatingWords words={ROTATING} />
@@ -60,7 +60,7 @@ export function Hero({ eventStart }: { eventStart: string | null }) {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.5 }}
-          className="text-muted-foreground text-base md:text-lg leading-relaxed mb-10 max-w-xl"
+          className="text-muted-foreground text-sm md:text-base leading-relaxed mb-6 max-w-xl"
         >
           One roll. One problem. Twenty-four hours to prototype it, build it, break it,
           fix it, ship it — and a leaderboard that remembers everything.
@@ -70,7 +70,7 @@ export function Hero({ eventStart }: { eventStart: string | null }) {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
-          className="mb-10"
+          className="mb-6"
         >
           <Countdown target={eventStart} label="UNTIL KICKOFF" />
         </motion.div>
