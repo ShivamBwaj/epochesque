@@ -4,6 +4,7 @@ import { requireAdminPage } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { Card, EmptyState, LinkButton, SectionHeading, StatCard } from "@/components/ui"
 import { TeamRow } from "./team-row"
+import { DownloadCredentialsButton } from "./download-credentials-button"
 
 export const dynamic = "force-dynamic"
 
@@ -42,6 +43,9 @@ export default async function AdminTeamsPage() {
         <LinkButton href="/admin/teams/import" variant="secondary" size="sm">
           Import CSV
         </LinkButton>
+        <DownloadCredentialsButton
+          teams={rows.filter((t) => t.auth_user_id !== null).map((t) => ({ team_code: t.team_code, team_name: t.team_name, leader_email: t.leader_email }))}
+        />
       </div>
 
       {rows.length === 0 ? (

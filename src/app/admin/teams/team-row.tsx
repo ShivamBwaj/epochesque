@@ -89,7 +89,7 @@ export function TeamRow({ team, psCode }: { team: Team; psCode: string }) {
             </SubmitButton>
           </form>
           {resetState.ok && resetState.password ? (
-            <div className="w-56 space-y-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5">
+            <div className="w-72 max-w-[90vw] space-y-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5">
               <p className="text-xs text-emerald-300">{resetState.message ?? "New password:"}</p>
               <CopyField value={resetState.password} label="password" />
               <p className="text-[11px] text-muted/70">Shown once — copy it now.</p>

@@ -17,6 +17,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://epochesque.netlify.app"),
   title: {
     default: "Epochesque — Roll. Build. Ship.",
     template: "%s — Epochesque",
