@@ -95,6 +95,28 @@ function queueSheetsPush(type: "attendance.write" | "attendance.resync", day: nu
   })
 }
 
+// Call after anything that changes the team roster (add/import) so a newly
+// added team isn't a blind spot in the sheet until someone happens to mark
+// their attendance or hits the manual Re-sync button. No-ops fast if no
+// sheet is connected — pushAttendanceToSheets checks that internally.
+export async function queueRosterChangeResync() {
+  after(async () => {
+    for (const day of [1, 2]) {
+      const state = await buildState(day)
+      const rows: SheetsAttendanceRow[] = (state.members ?? []).map((m) => ({
+        team_code: m.teamCode,
+        team_name: m.teamName,
+        member_key: m.memberKey,
+        name: m.name,
+        reg_no: m.regNo,
+        present: m.present,
+        marked_at: new Date().toISOString(),
+      }))
+      await pushAttendanceToSheets("attendance.resync", day, rows)
+    }
+  })
+}
+
 export async function setAttendanceMemberAction(
   day: number,
   teamId: string,
@@ -267,21 +289,7 @@ export async function connectSheetsWebhookAction(_prev: ConnectSheetsResult, for
 
   // Now that the sheet answered, do the real first sync (both days) in the
   // background so the admin isn't stuck waiting on it too.
-  after(async () => {
-    for (const day of [1, 2]) {
-      const state = await buildState(day)
-      const rows: SheetsAttendanceRow[] = (state.members ?? []).map((m) => ({
-        team_code: m.teamCode,
-        team_name: m.teamName,
-        member_key: m.memberKey,
-        name: m.name,
-        reg_no: m.regNo,
-        present: m.present,
-        marked_at: new Date().toISOString(),
-      }))
-      await pushAttendanceToSheets("attendance.resync", day, rows)
-    }
-  })
+  await queueRosterChangeResync()
 
   revalidatePath("/admin/attendance")
   return { ok: true, message: "Connected — syncing both days now. Every tick mirrors live from here." }

@@ -7,6 +7,7 @@ import { getSessionUser, isAdmin } from "@/lib/auth"
 import type { TeamMember, WinnersEntry } from "@/lib/database.types"
 import type { RollResult } from "@/components/case-opener"
 import { genPassword } from "@/lib/csv"
+import { queueRosterChangeResync } from "@/lib/actions/attendance"
 import { sanitizeFileName, imageFileError, imageMagicError } from "@/lib/validate"
 import type { User } from "@supabase/supabase-js"
 
@@ -195,6 +196,8 @@ export async function importTeamsConfirmAction(_prev: ImportResult, formData: Fo
 
   await audit(admin, user, "teams.import", `${created} teams`, { created, skipped: errors.length })
 
+  if (created > 0) await queueRosterChangeResync()
+
   revalidatePath("/admin/teams")
   revalidatePath("/admin/round1")
   return { ok: created > 0, createdCount: created, credentials, errors }
@@ -318,6 +321,7 @@ export async function addTeamManualAction(_prev: AddTeamResult, formData: FormDa
   }
 
   await audit(admin, user, "team.add_manual", teamCode, { leader: leaderEmail })
+  await queueRosterChangeResync()
   revalidatePath("/admin/teams")
   revalidatePath("/admin/round1")
   return { ok: true, team_code: teamCode, password, message: `Team ${teamCode} created. Login: ${leaderEmail}` }
