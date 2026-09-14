@@ -22,10 +22,10 @@ export const metadata: Metadata = {
     template: "%s — Epochesque",
   },
   description:
-    "Epochesque — a 48-hour hackathon where you don't choose your problem, you roll it. One locked-in problem statement, two days, one leaderboard that remembers everything.",
+    "Epochesque — a 24-hour hackathon where you don't choose your problem, you roll it. One locked-in problem statement, one day, one leaderboard that remembers everything.",
   openGraph: {
     title: "Epochesque — Roll. Build. Ship.",
-    description: "A 48-hour hackathon. One roll of the dice decides your problem statement.",
+    description: "A 24-hour hackathon. One spin of the reel decides your problem statement.",
     type: "website",
   },
 };

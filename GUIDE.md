@@ -1,8 +1,8 @@
 # EPOCHESQUE — The Complete Guide
 
-The website for **Epochesque**, a 48-hour hackathon where teams don't pick their problem — they **roll** it like dice, get locked in instantly, build through two rounds, and climb a publicly published leaderboard.
+The website for **Epochesque**, a 24-hour hackathon where teams don't pick their problem — they **roll** it like dice, get locked in instantly, build through two rounds, and climb a publicly published leaderboard.
 
-Dark, glassy, aurora-animated UI · roll-the-dice mechanic · zero setup for participants.
+Dark, glassy, aurora-animated UI · case-opening roll mechanic · zero setup for participants.
 
 ---
 

@@ -42,8 +42,8 @@ const FEATURES = [
   },
   {
     icon: Timer,
-    title: "Scoped for 48 hours",
-    body: "Every problem is sized for one relentless weekend — not one semester.",
+    title: "Scoped for 24 hours",
+    body: "Every problem is sized for one relentless day — not one semester.",
     accent: "text-blue-300",
     span: "",
     visual: null,

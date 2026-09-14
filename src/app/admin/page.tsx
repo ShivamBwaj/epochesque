@@ -63,7 +63,7 @@ export default async function AdminOverviewPage() {
         <Card className="ring-glow p-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="hud-label">🎲 THE ROLL — STAGE</p>
+              <p className="hud-label">🎰 THE ROLL — STAGE</p>
               <div className="mt-2 flex items-center gap-2">
                 <Badge tone={teamRows.length > 0 && taken === teamRows.length ? "green" : "cyan"}>
                   {teamRows.length > 0 ? `${teamRows.filter((t) => t.problem_statement_id !== null).length}/${teamRows.length} rolled` : "no teams yet"}

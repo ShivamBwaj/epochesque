@@ -27,7 +27,7 @@ export function SiteFooter() {
           <Link href="/login" className="hover:text-foreground transition-colors">Team Login</Link>
         </nav>
         <p className="font-mono text-[11px] text-muted/50">
-          built for the hack · <span style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}>may the dice favor you</span>
+          built for the hack · <span style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}>ship it before it ships you</span>
         </p>
       </div>
     </footer>

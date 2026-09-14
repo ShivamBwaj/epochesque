@@ -177,14 +177,6 @@ option:checked {
   box-shadow: 0 0 0 1px rgba(194, 112, 62, 0.25), 0 8px 50px -12px rgba(194, 112, 62, 0.35);
 }
 
-.dice-face {
-  animation: dice-roll 0.9s ease-in-out infinite;
-}
-@keyframes dice-roll {
-  0%, 100% { transform: rotate(-8deg) scale(1); }
-  50% { transform: rotate(8deg) scale(1.08); }
-}
-
 input, select, textarea {
   color-scheme: dark;
 }

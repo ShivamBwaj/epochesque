@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { logoutAction } from "@/lib/actions/auth"
@@ -35,14 +36,14 @@ export function SiteNav({
         style={{ minWidth: "min(680px, calc(100vw - 2rem))" }}
       >
         <Link href="/" className="flex items-center gap-2">
-          <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-            <rect x="4" y="4" width="24" height="24" rx="5" stroke="currentColor" strokeWidth="2.5" />
-            <circle cx="11" cy="11" r="2.2" fill="#c2703e" />
-            <circle cx="21" cy="11" r="2.2" fill="currentColor" />
-            <circle cx="16" cy="16" r="2.2" fill="#c2703e" />
-            <circle cx="11" cy="21" r="2.2" fill="currentColor" />
-            <circle cx="21" cy="21" r="2.2" fill="#c2703e" />
-          </svg>
+          <Image
+            src="/hackclub-logo.jpg"
+            alt="HackClub"
+            width={18}
+            height={18}
+            className="h-[18px] w-[18px] rounded-full object-cover ring-1 ring-white/10"
+            priority
+          />
           <span
             className="text-sm font-semibold tracking-tight text-foreground"
             style={{ fontFamily: "var(--font-display)" }}

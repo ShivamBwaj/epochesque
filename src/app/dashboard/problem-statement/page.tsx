@@ -76,7 +76,7 @@ export default async function ProblemStatementPage() {
         </p>
         <div className="mt-8">
           <span className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.02] px-6 py-3 text-base font-medium text-muted/50">
-            🎲 Watch the stage
+            🎰 Watch the stage
           </span>
         </div>
         <p className="mt-3 font-mono text-[11px] tracking-widest text-slate-600">ONE CASE PER TEAM · NO RE-ROLLS</p>

@@ -24,7 +24,7 @@ export function Hero({ eventStart }: { eventStart: string | null }) {
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
           </span>
           <span className="font-mono text-[11px] tracking-widest text-muted-foreground">
-            A 48-HOUR HACKATHON · REGISTRATIONS LIVE
+            A 24-HOUR HACKATHON · REGISTRATIONS LIVE
           </span>
         </motion.div>
 
@@ -62,7 +62,7 @@ export function Hero({ eventStart }: { eventStart: string | null }) {
           transition={{ duration: 0.5, delay: 0.5 }}
           className="text-muted-foreground text-base md:text-lg leading-relaxed mb-10 max-w-xl"
         >
-          One roll. One problem. Two days to prototype it, build it, break it,
+          One roll. One problem. Twenty-four hours to prototype it, build it, break it,
           fix it, ship it — and a leaderboard that remembers everything.
         </motion.p>
 

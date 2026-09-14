@@ -6,7 +6,7 @@ import { AnimatedNumber } from "@/components/animated-number"
 
 const stats = [
   { value: 100, label: "Teams in the arena", type: "number" as const },
-  { value: "48", label: "Hours on the clock", type: "static" as const },
+  { value: "24", label: "Hours on the clock", type: "static" as const },
   { value: "1", label: "Roll — locked forever", type: "static" as const },
   { value: "🏆", label: "Exclusive prizes + goodies", type: "static" as const },
 ]
