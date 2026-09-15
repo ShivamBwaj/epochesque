@@ -60,6 +60,12 @@ export type Database = {
         Update: { key?: string; value?: string; updated_at?: string }
         Relationships: []
       }
+      registrations: {
+        Row: { id: string; reg_no: string; phone: string; email: string; created_at: string; updated_at: string }
+        Insert: { id?: string; reg_no: string; phone: string; email: string; created_at?: string; updated_at?: string }
+        Update: { id?: string; reg_no?: string; phone?: string; email?: string; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
       people: {
         Row: { created_at: string; id: string; is_published: boolean; kind: string; name: string; photo_path: string | null; role: string; sort_order: number; tagline: string; tags: Json; updated_at: string }
         Insert: { created_at?: string; id?: string; is_published?: boolean; kind: string; name: string; photo_path?: string | null; role?: string; sort_order?: number; tagline?: string; tags?: Json; updated_at?: string }
