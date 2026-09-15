@@ -1,9 +1,0 @@
-/node_modules
-/.next/
-/out/
-/build
-.env*
-*.tsbuildinfo
-next-env.d.ts
-.netlify
-.DS_Store

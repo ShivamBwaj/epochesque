@@ -67,3 +67,8 @@ public/aman.jpeg
 
 # Local Netlify folder
 .netlify
+
+# register-site is its own separate git repo + Netlify site (nested .git
+# is what fixes Netlify's monorepo path-resolution bugs for it) — not
+# tracked here.
+/register-site
