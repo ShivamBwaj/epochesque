@@ -41,23 +41,34 @@ function doPost(e) {
     rowIndexByKey[key] = i + 2; // sheet row number (1-indexed, header offset)
   });
 
+  // Batch every Sheets API call instead of one per person — at real event
+  // scale (400+ registrants) writing one row at a time takes minutes and
+  // always times out the caller. Updates to existing rows are still one
+  // call each (there are only ever a handful on a normal tick), but new
+  // rows — which is EVERY row on a full resync, since the sheet was just
+  // cleared above — go in as a single batched write.
+  const appendRows = [];
   data.rows.forEach(function (r) {
     const key = r.team_code + "|" + (r.reg_no || r.name);
-    const values = [[r.team_code, r.team_name, r.name, r.reg_no, r.present ? "Present" : "Absent", r.marked_at]];
+    const values = [r.team_code, r.team_name, r.name, r.reg_no, r.present ? "Present" : "Absent", r.marked_at];
     const existingRow = rowIndexByKey[key];
     if (existingRow) {
-      sheet.getRange(existingRow, 1, 1, 6).setValues(values);
+      sheet.getRange(existingRow, 1, 1, 6).setValues([values]);
     } else {
-      const newRow = sheet.getLastRow() + 1;
-      sheet.getRange(newRow, 1, 1, 6).setValues(values);
-      rowIndexByKey[key] = newRow;
+      appendRows.push(values);
     }
   });
+  if (appendRows.length > 0) {
+    const startRow = sheet.getLastRow() + 1;
+    sheet.getRange(startRow, 1, appendRows.length, 6).setValues(appendRows);
+  }
 
   return ContentService.createTextOutput(JSON.stringify({ ok: true }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 ```
+
+**If you already deployed the old version:** open the sheet → **Extensions → Apps Script**, replace the whole `doPost` function with the code above, save (Ctrl+S), then **Deploy → Manage deployments → edit (pencil) → Version: New version → Deploy**. You do NOT need a new URL — the existing webhook URL keeps working once the code behind it is updated.
 
 3. **Deploy → New deployment → type: Web app**:
    - Execute as: **Me**

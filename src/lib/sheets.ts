@@ -50,7 +50,7 @@ export async function pushAttendanceToSheets(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type, day, rows }),
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(25000),
     })
     return res.ok
   } catch {
@@ -104,7 +104,7 @@ export async function pushScoresToSheets(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type, rows }),
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(25000),
     })
     return res.ok
   } catch {

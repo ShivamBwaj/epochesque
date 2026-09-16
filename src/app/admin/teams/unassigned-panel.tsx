@@ -22,11 +22,13 @@ export function UnassignedPanel({
   teamOptions,
   presentByReg,
   onToggleOne,
+  day,
 }: {
   people: UnassignedPerson[]
   teamOptions: { id: string; label: string; size: number }[]
   presentByReg?: Map<string, boolean>
   onToggleOne?: (registrationId: string, present: boolean) => void
+  day: 1 | 2
 }) {
   const attendanceOn = !!presentByReg
   const [query, setQuery] = useState("")
@@ -62,6 +64,7 @@ export function UnassignedPanel({
 
       {showAddForm ? (
         <form action={addFormAction} className="mt-3 grid gap-3 rounded-lg border border-white/[0.08] bg-surface/40 p-3 md:grid-cols-4">
+          <input type="hidden" name="day" value={day} />
           {addState.error ? <div className="md:col-span-4"><Alert tone="error">{addState.error}</Alert></div> : null}
           {addState.ok && addState.message ? <div className="md:col-span-4"><Alert tone="success">{addState.message}</Alert></div> : null}
           <div>

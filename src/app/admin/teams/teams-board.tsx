@@ -292,7 +292,7 @@ export function TeamsBoard({
       {syncMsg ? <Alert tone={syncMsg.startsWith("Sheet re-synced") ? "success" : "error"}>{syncMsg}</Alert> : null}
       {connectState.ok && connectState.message ? <Alert tone="success">{connectState.message}</Alert> : null}
 
-      <UnassignedPanel people={unassigned} teamOptions={teamOptions} presentByReg={presentByReg} onToggleOne={toggleOne} />
+      <UnassignedPanel people={unassigned} teamOptions={teamOptions} presentByReg={presentByReg} onToggleOne={toggleOne} day={day} />
 
       {rosterTeams.length === 0 ? (
         <EmptyState icon="◇" title="No teams yet" description="Build teams from the unassigned list above, or use Add walk-in team." />

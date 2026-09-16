@@ -15,6 +15,7 @@ export function AddTeamForm() {
   const [state, formAction] = useActionState<AdminCreateTeamResult, FormData>(adminWalkinTeamAction, { ok: false })
   const [teamName, setTeamName] = useState("")
   const [people, setPeople] = useState<Person[]>([{ ...EMPTY_PERSON }, { ...EMPTY_PERSON }])
+  const [day, setDay] = useState<1 | 2>(1)
 
   const update = (i: number, patch: Partial<Person>) =>
     setPeople((ps) => ps.map((p, j) => (j === i ? { ...p, ...patch } : p)))
@@ -41,18 +42,37 @@ export function AddTeamForm() {
         </Card>
       ) : (
         <form action={formAction} className="space-y-6">
+          <input type="hidden" name="day" value={day} />
           <Card className="p-5 md:p-6">
             <p className="hud-label mb-4">TEAM</p>
             <div>
               <Label htmlFor="teamName">Team name *</Label>
               <Input
                 id="teamName"
+                name="teamName"
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
                 maxLength={120}
                 placeholder="Team Volt"
                 required
               />
+            </div>
+            <div className="mt-4">
+              <Label>They&apos;re here now — mark present for</Label>
+              <div className="flex gap-2">
+                {[1, 2].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setDay(d as 1 | 2)}
+                    className={`rounded-full border px-4 py-1.5 text-sm transition ${
+                      day === d ? "border-accent/40 bg-accent-soft text-accent-hover" : "border-white/[0.08] bg-white/[0.03] text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Day {d}
+                  </button>
+                ))}
+              </div>
             </div>
           </Card>
 

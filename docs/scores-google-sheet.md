@@ -45,17 +45,23 @@ function doPost(e) {
     const rowIndexByTeam = {};
     existing.forEach(function (row, i) { rowIndexByTeam[row[0]] = i + 2; });
 
+    // Batch new rows into one write instead of one call per team — on a
+    // resync the tab was just cleared, so every row is "new" and this
+    // turns N slow calls into 1 fast one as the team count grows.
+    const appendRows = [];
     byRound[round].forEach(function (r) {
-      const values = [[r.team_code, r.team_name, r.round, r.total_score, r.notes, r.published ? "Published" : "Draft", r.updated_at]];
+      const values = [r.team_code, r.team_name, r.round, r.total_score, r.notes, r.published ? "Published" : "Draft", r.updated_at];
       const existingRow = rowIndexByTeam[r.team_code];
       if (existingRow) {
-        sheet.getRange(existingRow, 1, 1, 7).setValues(values);
+        sheet.getRange(existingRow, 1, 1, 7).setValues([values]);
       } else {
-        const newRow = sheet.getLastRow() + 1;
-        sheet.getRange(newRow, 1, 1, 7).setValues(values);
-        rowIndexByTeam[r.team_code] = newRow;
+        appendRows.push(values);
       }
     });
+    if (appendRows.length > 0) {
+      const startRow = sheet.getLastRow() + 1;
+      sheet.getRange(startRow, 1, appendRows.length, 7).setValues(appendRows);
+    }
   });
 
   return ContentService.createTextOutput(JSON.stringify({ ok: true }))
@@ -67,6 +73,8 @@ function doPost(e) {
    - Execute as: **Me**
    - Who has access: **Anyone**
 4. Copy the web app URL (`https://script.google.com/macros/s/…/exec`).
+
+**If you already deployed an earlier version:** open the sheet → **Extensions → Apps Script**, replace the whole `doPost` function with the code above, save, then **Deploy → Manage deployments → edit (pencil) → Version: New version → Deploy**. The existing webhook URL keeps working.
 5. On `/admin/scoring`, click **🔗 Connect Google Sheet for scores**, paste
    that URL, hit **Connect**. It tests the connection immediately and does a
    first full sync for every round — no `.env` editing, no redeploy. (A

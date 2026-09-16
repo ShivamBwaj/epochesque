@@ -104,6 +104,8 @@ export async function adminAddRegistrationAction(_prev: AddRegistrationResult, f
   if (!regNo) return { ok: false, error: "Registration number is required." }
   if (email && !EMAIL_RE.test(email)) return { ok: false, error: "That email doesn't look right — leave it blank or fix it." }
 
+  const day = Number(formData.get("day") ?? 1) === 2 ? 2 : 1
+
   const admin = createAdminClient()
   const { data, error } = await admin
     .from("registrations")
@@ -114,15 +116,23 @@ export async function adminAddRegistrationAction(_prev: AddRegistrationResult, f
     return { ok: false, error: error.message.includes("duplicate") ? `Registration number ${regNo} already exists.` : error.message }
   }
 
-  await audit(admin, user, "registration.add_walkin", regNo, { name, email })
+  // Registering on the spot means they're standing right there — mark them
+  // present for the day the admin currently has the board on, so nobody has
+  // to remember to also tick the checkbox right after.
+  await admin.from("attendance").upsert(
+    { day, registration_id: data.id, is_present: true, marked_at: new Date().toISOString() },
+    { onConflict: "day,registration_id" }
+  )
+
+  await audit(admin, user, "registration.add_walkin", regNo, { name, email, day })
   await queueRosterChangeResync()
   revalidatePath("/admin/teams")
   return {
     ok: true,
     registrationId: data.id,
     message: email
-      ? `${name} (${regNo}) registered.`
-      : `${name} (${regNo}) registered — no email yet, so they can't self-signup until one's added.`,
+      ? `${name} (${regNo}) registered and marked present for Day ${day}.`
+      : `${name} (${regNo}) registered and marked present for Day ${day} — no email yet, so they can't self-signup until one's added.`,
   }
 }
 
@@ -190,6 +200,7 @@ export async function adminWalkinTeamAction(_prev: AdminCreateTeamResult, formDa
   }
   if (!teamName) return { ok: false, error: "Team name is required." }
   if (people.length < 2 || people.length > 4) return { ok: false, error: "Teams must have 2-4 members." }
+  const day = Number(formData.get("day") ?? 1) === 2 ? 2 : 1
 
   const admin = createAdminClient()
   const registrationIds: string[] = []
@@ -227,10 +238,22 @@ export async function adminWalkinTeamAction(_prev: AdminCreateTeamResult, formDa
     return { ok: false, error: msg }
   }
 
-  await audit(admin, user, "team.add_walkin", team?.team_code ?? teamName, { members: people.length })
+  // Walk-in team = everyone standing right there — mark them all present for
+  // the day this was submitted for, same reasoning as the single-person
+  // on-spot registration above.
+  await admin.from("attendance").upsert(
+    registrationIds.map((id) => ({ day, registration_id: id, is_present: true, marked_at: new Date().toISOString() })),
+    { onConflict: "day,registration_id" }
+  )
+
+  await audit(admin, user, "team.add_walkin", team?.team_code ?? teamName, { members: people.length, day })
   await queueRosterChangeResync()
   revalidatePath("/admin/teams")
-  return { ok: true, team_code: team?.team_code, message: `Team ${team?.team_code} created with ${people.length} members.` }
+  return {
+    ok: true,
+    team_code: team?.team_code,
+    message: `Team ${team?.team_code} created with ${people.length} members, all marked present for Day ${day}.`,
+  }
 }
 
 export async function adminMoveTeamMemberAction(formData: FormData): Promise<ActionResult> {
