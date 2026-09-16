@@ -6,7 +6,7 @@ Two-day hackathon site with a Trench-style aurora UI: teams log in, roll a locke
 
 **Attendance → Google Sheet backup setup: [docs/attendance-google-sheet.md](./docs/attendance-google-sheet.md)**
 
-**Stack:** Next.js 16 (App Router, TS, Tailwind v4, framer-motion) · Supabase (Postgres + Auth + Storage) · Vercel-ready.
+**Stack:** Next.js 16 (App Router, TS, Tailwind v4, framer-motion) · Supabase (Postgres + Auth + Storage) · Netlify-ready.
 
 ## Quick start
 
@@ -55,7 +55,7 @@ Login at `/login` with the admin account → `/admin`.
 - `submissions` Storage bucket is private (signed URLs); `gallery` is public-read
 - `people` (speakers/OC) is public-read for **published rows only** (RLS); writes are service-role only
 - `roll_problem_statement()` is SECURITY DEFINER + atomic claim (`FOR UPDATE SKIP LOCKED`); anon can't call it
-- Upload magic-byte validation (real PDF/PPTX/PPT content required); proxy body buffer raised to 35MB so big decks (up to 25MB) survive
+- Upload magic-byte validation (real PDF/PPTX/PPT content required); decks capped at 10MB, uploaded straight to Supabase Storage (no Google Drive)
 - Login rate-limited per IP + per email; CSP/HSTS/XFO security headers in production
 
 Run `npm run security:probe` to re-verify (19 checks).

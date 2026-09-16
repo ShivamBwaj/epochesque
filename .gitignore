@@ -68,6 +68,9 @@ public/aman.jpeg
 # Local Netlify folder
 .netlify
 
+# Claude Code local tool config
+.claude/
+
 # register-site is its own separate git repo + Netlify site (nested .git
 # is what fixes Netlify's monorepo path-resolution bugs for it) — not
 # tracked here.

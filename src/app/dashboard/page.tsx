@@ -3,18 +3,15 @@ import { requireTeamPage } from "@/lib/auth"
 import { getEventTiming, getEventFlags } from "@/lib/settings"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { gameLabel, type TeamMember } from "@/lib/database.types"
+import { gameLabel } from "@/lib/database.types"
 import { Badge, Card, EmptyState, LinkButton, SectionHeading, StatCard } from "@/components/ui"
 import { Countdown } from "@/components/countdown"
+import { formatIST as fmt } from "@/lib/format-date"
 
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Overview",
-}
-
-function fmt(iso: string | null) {
-  return iso ? new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"
 }
 
 export default async function DashboardOverviewPage() {
@@ -24,7 +21,7 @@ export default async function DashboardOverviewPage() {
   const { data: submissions } = await supabase.from("submissions").select("*").eq("team_id", team.id)
   const round1 = (submissions ?? []).find((s) => s.round === "round1") ?? null
   const final = (submissions ?? []).find((s) => s.round === "final") ?? null
-  const members = (team.members as TeamMember[] | null) ?? []
+  const members = team.members
   const admin = createAdminClient()
   const { data: mySlot } = await admin.from("game_slots").select("game, start_time").eq("taken_by_team_id", team.id).maybeSingle()
 
@@ -83,7 +80,7 @@ export default async function DashboardOverviewPage() {
             </div>
           ) : (
             <div className="mt-3 space-y-3">
-              <p className="text-sm text-slate-300">Tekken or FIFA — 15-minute slots, 11:00 to 14:00.</p>
+              <p className="text-sm text-slate-300">Tekken or FIFA — 10-minute slots, 2:00 to 5:30 PM.</p>
               <LinkButton href="/dashboard/gaming" variant="secondary" size="sm">
                 Pick your slot
               </LinkButton>
@@ -174,29 +171,35 @@ export default async function DashboardOverviewPage() {
             </div>
           ) : (
             <ul className="mt-3 divide-y divide-slate-800/60">
-              {members.map((m, i) => (
-                <li key={i} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+              {members.map((m) => (
+                <li key={m.registrationId} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-100">
                       <span className="truncate">{m.name}</span>
-                      {m.email === team.leader_email ? <Badge tone="indigo">LEAD</Badge> : null}
+                      {m.role === "leader" ? <Badge tone="indigo">LEAD</Badge> : null}
                     </p>
                     <p className="truncate text-xs text-slate-500">
-                      {m.email ?? "no email"}
-                      {m.college ? ` · ${m.college}` : ""}
+                      {m.regNo} · {m.email}
                     </p>
                   </div>
-                  {m.payment_status ? (
-                    <Badge tone={m.payment_status.toLowerCase() === "paid" ? "green" : "amber"}>
-                      {m.payment_status.toUpperCase()}
-                    </Badge>
-                  ) : null}
                 </li>
               ))}
             </ul>
           )}
           <p className="mt-4 text-xs text-slate-600">Something off in your squad list? Ping the organizers at the help desk.</p>
         </Card>
+
+        {flags.certificatesPublished ? (
+          <Card className="p-5 md:col-span-2">
+            <p className="hud-label">CERTIFICATE</p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-slate-300">Your participation certificate is ready.</p>
+              <LinkButton href="/api/certificate" variant="secondary" size="sm">
+                ⬇ Download certificate
+              </LinkButton>
+            </div>
+          </Card>
+        ) : null}
       </div>
     </div>
   )

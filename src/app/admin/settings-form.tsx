@@ -17,7 +17,7 @@ export function SettingsForm({ timing }: { timing: EventTiming }) {
   const fields: { name: keyof EventTiming; label: string; help: string }[] = [
     { name: "event_start", label: "Event start", help: "Drives the landing page countdown." },
     { name: "ps_release_at", label: "Problem statements release", help: "Legacy — problems are rolled on the Roll Stage now." },
-    { name: "round1_deadline", label: "OC Round 1 deadline", help: "Gates OC Round 1 deck submissions." },
+    { name: "round1_deadline", label: "OC Round deadline", help: "Gates OC Round deck submissions." },
     { name: "final_deadline", label: "Final round deadline", help: "Gates final round repo submissions." },
     { name: "event_end", label: "Event end", help: "Informational — the closing time of Epochesque." },
   ]

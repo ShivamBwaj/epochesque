@@ -96,7 +96,7 @@ async function main() {
   })
 
   await check("write attendance table", async () => {
-    const { error } = await anon.from("attendance").insert({ day: 1, team_id: "00000000-0000-0000-0000-000000000000", member_key: "hack" })
+    const { error } = await anon.from("attendance").insert({ day: 1, registration_id: "00000000-0000-0000-0000-000000000000", is_present: true })
     return { denied: !!error, detail: error ? error.message : "INSERT WENT THROUGH" }
   })
 
@@ -108,6 +108,57 @@ async function main() {
   await check("call book_game_slot RPC as anon", async () => {
     const { error } = await anon.rpc("book_game_slot", { p_slot_id: "00000000-0000-0000-0000-000000000000" })
     return { denied: !!error, detail: error ? error.message : "RPC EXECUTED" }
+  })
+
+  await check("read registrations table", async () => {
+    const { data, error } = await anon.from("registrations").select("*")
+    return { denied: !!error, detail: error ? error.message : `${(data ?? []).length} rows visible` }
+  })
+
+  await check("read team_members table", async () => {
+    const { data, error } = await anon.from("team_members").select("*")
+    return { denied: !!error, detail: error ? error.message : `${(data ?? []).length} rows visible` }
+  })
+
+  await check("call create_team_with_members RPC as anon", async () => {
+    const { error } = await anon.rpc("create_team_with_members", { p_team_name: "HACK", p_teammate_registration_ids: [] })
+    return { denied: !!error, detail: error ? error.message : "RPC EXECUTED" }
+  })
+
+  await check("call search_teammates RPC as anon", async () => {
+    const { error } = await anon.rpc("search_teammates", { p_query: "" })
+    return { denied: !!error, detail: error ? error.message : "RPC EXECUTED" }
+  })
+
+  await check("call get_my_team RPC as anon", async () => {
+    const { data, error } = await anon.rpc("get_my_team")
+    const denied = !!error || (data ?? []).length === 0
+    return { denied, detail: error ? error.message : `${(data ?? []).length} rows visible` }
+  })
+
+  await check("call admin_move_team_member RPC as anon", async () => {
+    const { error } = await anon.rpc("admin_move_team_member", { p_registration_id: "00000000-0000-0000-0000-000000000000", p_new_team_id: null })
+    return { denied: !!error, detail: error ? error.message : "RPC EXECUTED" }
+  })
+
+  await check("call admin_set_team_leader RPC as anon", async () => {
+    const { error } = await anon.rpc("admin_set_team_leader", { p_team_id: "00000000-0000-0000-0000-000000000000", p_registration_id: "00000000-0000-0000-0000-000000000000" })
+    return { denied: !!error, detail: error ? error.message : "RPC EXECUTED" }
+  })
+
+  await check("call admin_create_team_with_members RPC as anon", async () => {
+    const { error } = await anon.rpc("admin_create_team_with_members", { p_team_name: "HACK", p_registration_ids: [] })
+    return { denied: !!error, detail: error ? error.message : "RPC EXECUTED" }
+  })
+
+  await check("read integration_secrets table", async () => {
+    const { data, error } = await anon.from("integration_secrets").select("*")
+    return { denied: !!error, detail: error ? error.message : `${(data ?? []).length} rows visible` }
+  })
+
+  await check("list certificates storage bucket", async () => {
+    const { data, error } = await anon.storage.from("certificates").list()
+    return { denied: !!error || (data ?? []).length === 0, detail: error ? error.message : `${(data ?? []).length} objects visible` }
   })
 
   await check("list submissions storage bucket", async () => {
@@ -131,7 +182,7 @@ async function main() {
 
   await check("read event_settings (public by design)", async () => {
     const { data, error } = await anon.from("event_settings").select("key")
-    const allowed = ["event_start", "ps_release_at", "round1_deadline", "final_deadline", "event_end", "roll_open", "final_open"]
+    const allowed = ["event_start", "ps_release_at", "round1_deadline", "final_deadline", "event_end", "roll_open", "final_open", "gaming_open", "certificates_published", "ppt_template_path", "projects_published"]
     const expected = !error && data.length === allowed.length && data.every((r) => allowed.includes(r.key))
     return { denied: expected, detail: expected ? "OK — intentionally public timing info + gate flags only" : `UNEXPECTED: ${error?.message ?? data.length + " keys"}` }
   })

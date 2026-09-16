@@ -3,15 +3,12 @@ import { requireAdminPage } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { Card, EmptyState, LinkButton, SectionHeading, StatCard, StatusBadge } from "@/components/ui"
 import { CleanupUploadsButton } from "./cleanup-uploads-button"
+import { formatIST as fmt } from "@/lib/format-date"
 
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
-  title: "OC Round 1",
-}
-
-function fmt(iso: string | null) {
-  return iso ? new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"
+  title: "OC Round",
 }
 
 export default async function AdminRound1Page() {
@@ -25,7 +22,9 @@ export default async function AdminRound1Page() {
   const subMap = new Map<string, { file_name: string | null; file_size: number | null; submitted_at: string; url: string | null }>()
   for (const row of submissions ?? []) {
     let url: string | null = null
-    if (row.storage_path) {
+    if (row.drive_view_link) {
+      url = row.drive_view_link
+    } else if (row.storage_path) {
       const { data } = await admin.storage.from("submissions").createSignedUrl(row.storage_path, 300)
       url = data?.signedUrl ?? null
     }
@@ -43,20 +42,20 @@ export default async function AdminRound1Page() {
   return (
     <div className="space-y-8">
       <SectionHeading
-        kicker="OC ROUND 1 — CONCEPT & PITCH"
-        title="OC Round 1 decks"
-        description="Every team's deck in one place. Download links expire after 5 minutes — refresh the page for fresh ones. When the judges are done, enter scores under Scoring."
+        kicker="ROUND 2 — OC ROUND — CONCEPT & PITCH"
+        title="OC Round decks"
+        description="Every team's deck in one place — download links expire after 5 minutes. When the judges are done, enter scores under Scoring."
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Teams" value={String(rows.length)} sub="In the arena" />
-        <StatCard label="Decks in" value={String(submittedCount)} sub="OC Round 1 submissions" />
+        <StatCard label="Decks in" value={String(submittedCount)} sub="OC Round submissions" />
         <StatCard label="Missing" value={String(rows.length - submittedCount)} sub="No deck yet" />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <LinkButton href="/admin/scoring?round=round1" size="sm">
-          Enter OC Round 1 scores →
+          Enter OC Round scores →
         </LinkButton>
         <CleanupUploadsButton />
       </div>

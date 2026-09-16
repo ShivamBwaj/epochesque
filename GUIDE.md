@@ -8,11 +8,11 @@ Dark, glassy, aurora-animated UI · case-opening roll mechanic · zero setup for
 
 ## 0. Quick start for organizers (read this first)
 
-- **Site:** https://epochesque.vercel.app · **Admin login:** the admin account (see `.env.local` / password vault — `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`)
+- **Site:** (check your Netlify site dashboard for the live URL) · **Admin login:** the admin account (see `.env.local` / password vault — `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`)
 - **Who does what, in one breath:** Settings (clocks) → Problems (the pool) → People (speakers + OC) → Import teams (CSV) → hand out credentials → at the event: **Open roll** → teams roll + upload decks → **Scoring** → **Publish** → **Open final** → repos in → score → publish → **Winners** → **Gallery**.
 - **The two big switches** on `/admin` (Open roll / Open final) start CLOSED. Nothing works for teams until you flip them.
 - **Scores are law:** once a leaderboard is published, the database itself refuses score edits. Unpublish → edit → republish. Never silently edit a live board.
-- **Uploads:** teams upload decks straight to Supabase storage (up to 25 MB); you download them from `/admin/round1` via links that expire in 5 minutes.
+- **Uploads:** teams upload decks straight to Supabase storage (up to 10 MB); you download them from `/admin/round1` via links that expire in 5 minutes.
 - **If something looks wrong:** `/admin/audit` shows every admin action ever taken, with timestamps.
 
 ---
@@ -25,7 +25,7 @@ Dark, glassy, aurora-animated UI · case-opening roll mechanic · zero setup for
 Browser (participant/admin)
     │
     ▼
-Next.js server (runs on Vercel)
+Next.js server (runs on Netlify)
     ├── Pages render server-side (secure — secrets never reach the browser)
     ├── Server Actions = the API (login, roll, upload, score, publish…)
     │       every write goes through an admin-or-owner check HERE
@@ -43,7 +43,7 @@ Supabase (the database + more)
 | Database | Supabase Postgres (`supabase/migrations/` has the full schema) |
 | Login & sessions | Supabase Auth (email + password) |
 | File uploads | Supabase Storage (`submissions` bucket = private, `gallery` = public) |
-| Hosting | Vercel (frontend + server actions), Supabase cloud (DB) |
+| Hosting | Netlify (frontend + server actions), Supabase cloud (DB) |
 
 **Key rule:** the browser only ever holds the *anon* key. It cannot read or write anything the server doesn't explicitly allow — the database rejects anonymous access at the Postgres level (RLS). Every mutation (creating teams, saving scores, publishing leaderboards) runs on the server with the *service role* key, after checking "is this actually an admin?".
 
@@ -66,7 +66,7 @@ Supabase (the database + more)
 |---|---|
 | `/dashboard` | Mission control — team status, problem statement state, submission states, deadline countdown, member list, 📣 organizer notices |
 | `/dashboard/problem-statement` | **The dice roll.** Big animated 🎲 button. Before release time: countdown lock. After rolling: your locked problem, forever. |
-| `/dashboard/submit/round1` | Upload the pitch deck (.ppt/.pptx/.pdf, max 25 MB, real-file-content-checked). Replaceable until the deadline. |
+| `/dashboard/submit/round1` | Upload the pitch deck (.ppt/.pptx/.pdf, max 10 MB, real-file-content-checked). Replaceable until the deadline. |
 | `/dashboard/submit/final` | Paste the GitHub repo link (shortlisted teams only, until final deadline) |
 
 ### Admin console (after admin login)
@@ -75,9 +75,9 @@ Supabase (the database + more)
 | `/admin` | Overview — live counts (teams/status/rolls/submissions), event gate states, recent admin actions |
 | `/admin/teams` | Every team: code, members, login email, PS, status. Change the leader from the member dropdown, reset password (shows once, copy it), delete team |
 | `/admin/teams/import` | **CSV import wizard** (details below) |
-| `/admin/attendance` | **Live attendance** — Day 1 / Day 2 tabs, one card per team, per-member checkboxes (reg no shown), ✓ mark-whole-team button, search, incomplete-teams filter, CSV download, Google Sheet re-sync (see `docs/attendance-google-sheet.md`). Syncs across every open admin screen every ~2.5s |
+| `/admin/teams` | **Teams + attendance**, one page — build teams from unassigned registrants, Day 1 / Day 2 attendance ticking right on each team card, search, Google Sheet re-sync (see `docs/attendance-google-sheet.md`). Syncs across every open admin screen every ~2.5s |
 | `/admin/problem-statements` | Add/edit the problem pool. Each PS has a `max_teams` capacity — the roll always hands out the LEAST-taken statement first, so teams distribute evenly across the pool |
-| `/admin/gaming` | **Gaming slots** — Tekken + FIFA, 11:00–14:00, 15-min slots. One team per slot, one slot per team (atomic). Clear a booking to free a slot |
+| `/admin/gaming` | **Gaming slots** — Tekken + FIFA, 2:00–5:30 PM, 10-min slots. One team per slot, one slot per team (atomic). Shows leader name + reg number per booking. Clear a booking to free a slot |
 | `/admin/people` | Speakers + OC members: name, photo (circular pfp), role, tagline, tags, order, visible/hidden — publishes straight to `/speakers` and `/oc` |
 | `/admin/round1` | All Round 1 decks — download via expiring links (5 min). Scoring lives under Scoring |
 | `/admin/final` | Every team's GitHub repo links. Open/close final submissions with the switch |
@@ -148,7 +148,7 @@ Supabase (the database + more)
 - **Zero API grants** on scores, announcements, leaderboard visibility, admins, audit log — these tables are invisible to the outside; only server-side admin actions touch them.
 - **Score lock trigger** — Postgres itself refuses score edits while that round's leaderboard is published. You must unpublish first (visible action) before correcting.
 - **The roll is atomic** (`SELECT … FOR UPDATE SKIP LOCKED`) — two teams clicking simultaneously can never claim the same slot. No re-rolls: the function is idempotent and returns your existing PS.
-- **Upload checks**: extension + size + **magic bytes** (a `.exe` renamed `.pptx` is rejected — file content is inspected). The proxy body buffer is raised to 35MB so real decks (up to 25MB) upload without the old SYSTEM FAULT.
+- **Upload checks**: extension + size + **magic bytes** (a `.exe` renamed `.pptx` is rejected — file content is inspected). Decks are capped at 10MB and always land in Supabase Storage — Google Drive uploads were removed.
 - **Private submissions bucket** — decks are only reachable via expiring signed URLs generated for the admin.
 - **Login rate-limited** per IP and per email.
 - **Security headers** (CSP, HSTS, X-Frame-Options DENY, nosniff) in production.
@@ -172,15 +172,15 @@ E2E tests seed their own `E2E-*` data and clean up after themselves — safe to 
 
 ## 7. Deploy — LIVE (already done)
 
-**Production URL: https://epochesque.vercel.app**
+**Production URL: (check your Netlify site dashboard for the live URL)**
 **Repo: https://github.com/ShivamBwaj/epochesque (private)**
 
-The site is deployed and connected to the repo — every `git push` to `master` auto-deploys to production. Env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) are already set in Vercel for Production + Preview.
+The site is deployed and connected to the repo — every `git push` to the connected branch auto-deploys to production via Netlify. Env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) must be set in Netlify site settings for Production (and any preview context you use).
 
 **Important platform notes (learned the hard way):**
 
-- **Vercel caps function request bodies at ~4.5MB.** That's why ALL file uploads (Round 1 decks, People photos, Gallery images) go **directly from the browser to Supabase Storage** via short-lived signed upload URLs — the file never passes through the server. The server only issues the signed URL and verifies the file (magic bytes, size, path) when the team confirms.
-- Still to do (one-time, in Supabase dashboard): enable **Leaked password protection** in Authentication → Settings, and set `NEXT_PUBLIC_SITE_URL` in Vercel to the final domain if you add a custom one.
+- **Netlify functions have their own request body limits.** That's why ALL file uploads (Round 1 decks, People photos, Gallery images) go **directly from the browser to Supabase Storage** via short-lived signed upload URLs — the file never passes through the server. The server only issues the signed URL and verifies the file (magic bytes, size, path) when the team confirms.
+- Still to do (one-time, in Supabase dashboard): enable **Leaked password protection** in Authentication → Settings, and set `NEXT_PUBLIC_SITE_URL` in Netlify site settings to the final domain if you add a custom one.
 - DB migrations: `npm run db:migrate` applies everything in order; `node scripts/apply-migration.mjs supabase/migrations/FILE.sql` applies one. All 9 migrations are already applied to the live DB.
 
 ---

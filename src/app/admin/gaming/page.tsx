@@ -16,24 +16,35 @@ export const metadata: Metadata = {
 export default async function AdminGamingPage() {
   await requireAdminPage()
   const admin = createAdminClient()
-  const [{ data: slots }, { data: teams }, flags] = await Promise.all([
+  const [{ data: slots }, { data: teams }, { data: teamMembers }, flags] = await Promise.all([
     admin.from("game_slots").select("*").order("slot_index"),
     admin.from("teams").select("id, team_code, team_name"),
+    admin.from("team_members").select("team_id, role, registrations(name, reg_no)"),
     getEventFlags(),
   ])
   const teamMap = new Map((teams ?? []).map((t) => [t.id, t]))
-
-  const games: { game: "tekken" | "fifa"; slots: (GameSlot & { teamCode?: string; teamName?: string })[] }[] = (["tekken", "fifa"] as const).map(
-    (game) => ({
-      game,
-      slots: (slots ?? [])
-        .filter((s) => s.game === game)
-        .map((s) => {
-          const t = s.taken_by_team_id ? teamMap.get(s.taken_by_team_id) : undefined
-          return { ...s, teamCode: t?.team_code, teamName: t?.team_name }
-        }),
-    })
+  const leaderByTeam = new Map(
+    (teamMembers ?? [])
+      .filter((tm) => tm.role === "leader")
+      .map((tm) => {
+        const reg = Array.isArray(tm.registrations) ? tm.registrations[0] : tm.registrations
+        return [tm.team_id, { name: reg?.name ?? "—", regNo: reg?.reg_no ?? "—" }] as const
+      })
   )
+
+  const games: {
+    game: "tekken" | "fifa"
+    slots: (GameSlot & { teamCode?: string; teamName?: string; leaderName?: string; leaderRegNo?: string })[]
+  }[] = (["tekken", "fifa"] as const).map((game) => ({
+    game,
+    slots: (slots ?? [])
+      .filter((s) => s.game === game)
+      .map((s) => {
+        const t = s.taken_by_team_id ? teamMap.get(s.taken_by_team_id) : undefined
+        const leader = s.taken_by_team_id ? leaderByTeam.get(s.taken_by_team_id) : undefined
+        return { ...s, teamCode: t?.team_code, teamName: t?.team_name, leaderName: leader?.name, leaderRegNo: leader?.regNo }
+      }),
+  }))
 
   const allSlots = slots ?? []
   const booked = allSlots.filter((s) => s.taken_by_team_id !== null).length
@@ -43,7 +54,7 @@ export default async function AdminGamingPage() {
       <SectionHeading
         kicker="SIDE QUEST"
         title="Gaming Slots"
-        description="Tekken and FIFA, 15-minute slots from 11:00 to 14:00. One team per slot, one slot per team — bookings are atomic, no double-booking possible."
+        description="Tekken and FIFA, 10-minute slots from 2:00 PM to 5:30 PM. One team per slot, one slot per team — bookings are atomic, no double-booking possible."
       />
 
       <Card className={`p-5 ${flags.gamingOpen ? "ring-glow" : ""}`}>
@@ -76,8 +87,8 @@ export default async function AdminGamingPage() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Slots booked" value={`${booked}/${allSlots.length}`} sub="across both games" />
-        <StatCard label="Tekken" value={`${games[0].slots.filter((s) => s.taken_by_team_id).length}/12`} sub="11:00 – 14:00" />
-        <StatCard label="FIFA" value={`${games[1].slots.filter((s) => s.taken_by_team_id).length}/12`} sub="11:00 – 14:00" />
+        <StatCard label="Tekken" value={`${games[0].slots.filter((s) => s.taken_by_team_id).length}/${games[0].slots.length}`} sub="2:00 – 5:30 PM" />
+        <StatCard label="FIFA" value={`${games[1].slots.filter((s) => s.taken_by_team_id).length}/${games[1].slots.length}`} sub="2:00 – 5:30 PM" />
       </div>
 
       {allSlots.length === 0 ? (
@@ -92,7 +103,8 @@ export default async function AdminGamingPage() {
               </div>
               <div>
                 {gameSlots.map((s, i) => {
-                  const endTime = `${String(11 + Math.floor(((i + 1) * 15) / 60)).padStart(2, "0")}:${String(((i + 1) * 15) % 60).padStart(2, "0")}`
+                  const endMinutes = 14 * 60 + (i + 1) * 10
+                  const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`
                   const taken = s.taken_by_team_id !== null
                   return (
                     <div
@@ -104,9 +116,14 @@ export default async function AdminGamingPage() {
                       </span>
                       {taken ? (
                         <>
-                          <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-                            {s.teamCode} <span className="text-muted-foreground">· {s.teamName}</span>
-                          </span>
+                          <div className="min-w-0 flex-1 truncate text-sm text-foreground">
+                            <span>
+                              {s.teamName} <span className="text-muted-foreground">· {s.teamCode}</span>
+                            </span>
+                            <p className="truncate text-[11px] text-muted-foreground">
+                              Leader: {s.leaderName} · {s.leaderRegNo}
+                            </p>
+                          </div>
                           <form action={clearGameSlotAction}>
                             <input type="hidden" name="slotId" value={s.id} />
                             <button

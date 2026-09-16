@@ -15,8 +15,8 @@ export function LoginForm({ initialError }: { initialError?: string }) {
       <form action={formAction} className="space-y-4">
         {error ? <Alert tone="error">{error}</Alert> : null}
         <div>
-          <Label htmlFor="email">Leader email</Label>
-          <Input id="email" name="email" type="email" autoComplete="email" placeholder="leader@team.edu" required />
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" name="email" type="email" autoComplete="email" placeholder="you@vitstudent.ac.in" required />
         </div>
         <div>
           <Label htmlFor="password">Password</Label>
@@ -30,7 +30,7 @@ export function LoginForm({ initialError }: { initialError?: string }) {
         href="/login/setup"
         className="block text-center text-xs text-accent-hover underline-offset-4 hover:underline"
       >
-        First time here? Set up your team&apos;s password →
+        Registered but no account yet? Sign up →
       </Link>
     </div>
   )

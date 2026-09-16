@@ -6,8 +6,6 @@ import { beginRound1UploadAction, submitRound1Action, type SubmitState } from "@
 import { deckFileError } from "@/lib/validate"
 import { Alert, Input, Label } from "@/components/ui"
 
-const MAX_BYTES = 25 * 1024 * 1024
-
 export function Round1Form() {
   const [state, setState] = useState<SubmitState>({})
   const [busy, setBusy] = useState(false)
@@ -34,27 +32,33 @@ export function Round1Form() {
     try {
       setProgress("Starting upload…")
       const begin = await beginRound1UploadAction(file.name, file.size)
-      if (!begin.ok || !begin.signedUrl || !begin.path) {
+      if (!begin.ok) {
         setState({ error: begin.error ?? "Could not start the upload." })
         return
       }
 
       setProgress(`Uploading ${(file.size / 1048576).toFixed(1)} MB…`)
-      const up = await fetch(begin.signedUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type || "application/octet-stream" },
-      })
-      if (!up.ok) {
-        setState({ error: "Upload failed. Check your connection and try again." })
+      const fd = new FormData()
+      fd.set("file_name", file.name)
+      fd.set("file_size", String(file.size))
+
+      if (begin.signedUrl && begin.path) {
+        const up = await fetch(begin.signedUrl, {
+          method: "PUT",
+          body: file,
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+        })
+        if (!up.ok) {
+          setState({ error: "Upload failed. Check your connection and try again." })
+          return
+        }
+        fd.set("path", begin.path)
+      } else {
+        setState({ error: "Could not start the upload." })
         return
       }
 
       setProgress("Verifying file…")
-      const fd = new FormData()
-      fd.set("path", begin.path)
-      fd.set("file_name", file.name)
-      fd.set("file_size", String(file.size))
       const result = await submitRound1Action({}, fd)
       setState(result)
       if (result.ok) {
@@ -75,7 +79,7 @@ export function Round1Form() {
       {state.ok && state.message ? <Alert tone="success">{state.message}</Alert> : null}
       {progress ? <Alert tone="info">{progress}</Alert> : null}
       <div>
-        <Label htmlFor="file">Pitch deck (.ppt, .pptx or .pdf — max 25 MB)</Label>
+        <Label htmlFor="file">Pitch deck (.ppt, .pptx or .pdf — max 10 MB)</Label>
         <Input
           id="file"
           name="file"

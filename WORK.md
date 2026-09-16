@@ -2,7 +2,109 @@
 
 Source of truth for ongoing work. Update this file as things get done or new issues appear.
 
-## Status: ✅ v9.1 — LIVE on Netlify · full suite green · DB pristine
+## Status: 🚧 v10 in progress (NOT deployed — production still on v9.1 code)
+
+## v10 — individual signup + self-formed teams (in progress, local/DB only)
+
+Registration is no longer team-first (admin CSV import of known Team Ids) — it's
+individual-first: everyone in `registrations` (fed by register-site + a polled
+Google Sheet) signs up themselves, then forms/joins a 2-4 person team from their
+own dashboard, once, irreversibly.
+
+- [x] Schema: `registrations.auth_user_id`, `team_members` (one row per person,
+      ever — `registration_id` is unique, which is what makes "no team switching"
+      automatic), `create_team_with_members` / `admin_create_team_with_members` /
+      `admin_move_team_member` / `admin_set_team_leader` / `search_teammates` /
+      `get_my_team` SECURITY DEFINER RPCs (migrations 0023-0026)
+- [x] Self-serve signup (`/login/setup`): reg no + email must match an
+      unclaimed `registrations` row, then the person sets their own password —
+      replaces the old "team leader first-login" flow entirely
+- [x] Dashboard team-setup gate: anyone with no `team_members` row sees a
+      mandatory "form your team" screen instead of the dashboard (naturally
+      resumable — sign out and back in, still no row, still see the gate).
+      Search teammates by reg no/name, pick 1-3, review, explicit warning
+      ("cannot create another team or go back on your decision"), lock it in
+      atomically (2-4 members enforced by the RPC)
+- [x] Admin `/admin/teams` rewritten: roster view per team + "unassigned
+      registrants" panel (search, register-someone-new, create-team-from-selection),
+      per-member move/make-leader/reset-account, incomplete-team (<2) badge
+- [x] Admin `/admin/teams/add`: walk-in desk tool — registers 2-4 people (or
+      reuses existing rows) and forms a team from them in one step
+- [x] Removed entirely: CSV team-import wizard, `leader_email`/`password_set`
+      first-login flow, `src/lib/csv.ts` registration parser — no longer
+      relevant now that teams aren't pre-known
+- [x] Attendance reworked to key off `registrations` instead of `teams.members`
+      (migration 0027 — **drops and recreates `attendance`**, so the currently
+      *deployed* production code's attendance page is broken until this ships;
+      per instruction, holding all deploys until everything in this list is
+      done, then deploying + verifying together). Unassigned registrants show
+      in their own card so check-in works before any teams exist.
+- [x] `netlify/functions/sync-registrations.mts` — scheduled function (every 5
+      min) that polls the Epochesque Registrations Google Sheet and inserts any
+      row not yet in `registrations` (catches walk-ins OC types directly into
+      the sheet). Verified the parse/diff logic against the real sheet (350
+      rows parsed correctly); can't invoke the scheduled function itself
+      without `netlify dev`/a real deploy.
+- [x] `npm run add:admin -- email password` — lets each organizer get their own
+      admin login (concurrent admin sessions already work out of the box;
+      Supabase Auth allows multiple simultaneous sessions per account)
+- [x] Fixed a pre-existing `tsconfig.json` bug (register-site, now its own
+      separate repo, was still being typechecked/built as part of this
+      project) — excluded it
+- [x] **Certificates** — done. Template exported by the user, measured the
+      exact name-line coordinates off the 6000x3375 PNG, `src/lib/certificate.ts`
+      (pdf-lib) stamps the name (auto-shrinks for long names). Template lives
+      in a new private `certificates` Storage bucket. `/api/certificate`
+      (participant, gated by a `certificates_published` event_settings flag
+      admins toggle from Settings) and `/api/admin/certificates/download-all`
+      (one combined multi-page PDF — embedding the template once and reusing
+      it across pages is what keeps ~380 people under 3 seconds; a
+      one-PDF-per-person zip approach took over two minutes and would have
+      timed out on Netlify).
+- [x] **Google Drive uploads** — done, via OAuth (not a service account —
+      service accounts have no storage quota outside a paid Workspace Shared
+      Drive, which this plan doesn't have). `src/lib/google-drive.ts`, admin
+      "Connect Google Drive" button on Settings (one-time consent, refresh
+      token stored in `integration_secrets`), Round 1 upload flow
+      (`round1-form.tsx` + `beginRound1UploadAction`/`submitRound1Action`)
+      uses Drive when connected, Supabase Storage otherwise — automatic
+      fallback, no breakage either way. One folder per team, created lazily,
+      cached on `teams.drive_folder_id`.
+- [x] **Leader-only actions** — team leader is the only one who can upload
+      the deck, submit the final repo, and book a gaming slot; every member
+      can see everything (problem statement shown large/prominent to
+      everyone). Enforced both in the UI and inside the server actions
+      themselves (`isTeamLeader()` in database.types.ts).
+- [x] **Found + fixed a real bug while testing the leader gating**: several
+      RLS policies (`submissions`, `problem_statements`, `teams`) and the
+      `book_game_slot()` function still resolved "my team" via the OLD
+      `teams.auth_user_id = auth.uid()` model — silently broken for every
+      new self-formed team (round1/final submission reads always showed
+      "nothing uploaded yet" even after a successful upload; gaming booking
+      rejected every new team with SLOT_NO_TEAM). Fixed via a
+      `my_team_ids()` SECURITY DEFINER helper + updated policies (migrations
+      0030-0031). Verified directly against a real signed-in test session,
+      not just by reading the code.
+- [ ] **Not done yet: actually clicking "Connect Google Drive"** — the OAuth
+      client is wired up but nobody has completed the one-time consent flow
+      (that has to be a human clicking "Allow" in their own browser signed
+      into the Drive-owning account, not something to do on their behalf).
+      Round 1 uploads fall back to Supabase Storage until this happens — no
+      urgency, but flag it before assuming Drive uploads are live.
+- [ ] Deploy: full test suite + build, then `netlify deploy --prod`, then
+      verify live (attendance especially, since its schema changed) — only
+      when the user says go. **User must also re-login to the correct Netlify
+      account first** — flagged mid-session that the CLI was on the wrong one.
+      Before deploying: set `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`,
+      `GOOGLE_DRIVE_ROOT_FOLDER_ID`, and a **production** `GOOGLE_OAUTH_REDIRECT_URI`
+      (`https://epochesque.netlify.app/api/admin/google-drive/callback` — the
+      `.env.local` one points at localhost) as real Netlify env vars, or the
+      Drive connect button will fail once deployed.
+- [ ] Update GUIDE.md/README.md/CONTRACTS.md — several sections still describe
+      the old CSV-import team model and say "Vercel" (actual deploy is
+      Netlify per v9.1 above); not yet corrected.
+
+## v9.1 — Netlify deploy (production)
 
 ## v9.1 — Netlify deploy (production)
 - [x] **LIVE: https://epochesque.netlify.app** — netlify-cli installed + logged in, site created (clean URL), env vars set (production + preview), `netlify deploy --prod`.

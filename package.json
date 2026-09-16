@@ -24,7 +24,8 @@
     "security:probe": "node scripts/security-probe.mjs",
     "db:migrate": "node scripts/apply-migration.mjs",
     "db:migrate:file": "node scripts/apply-migration.mjs",
-    "seed:admin": "node scripts/seed-admin.mjs"
+    "seed:admin": "node scripts/seed-admin.mjs",
+    "add:admin": "node scripts/add-admin.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -33,6 +34,7 @@
     "lucide-react": "^1.45.0",
     "next": "16.3.5",
     "ogl": "^1.0.11",
+    "pdf-lib": "^1.17.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-easy-crop": "^6.2.3",

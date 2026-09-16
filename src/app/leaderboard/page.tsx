@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Leaderboard",
-  description: "Round 1 and final round scores, plus the winners' podium — admin view.",
+  description: "Quiz, OC Round, and Final scores, plus the winners' podium — admin view.",
   robots: { index: false, follow: false },
 }
 
@@ -78,49 +78,109 @@ function WinnerCard({ entry }: { entry: WinnersEntry }) {
   )
 }
 
-function RoundBoard({
-  kicker,
-  title,
-  description,
-  rows,
-}: {
-  kicker: string
-  title: string
-  description: string
-  rows: LeaderboardEntry[]
-}) {
+interface UnifiedRow {
+  teamId: string
+  teamCode: string
+  teamName: string
+  quiz: number | null
+  ocRound: number | null
+  total: number | null
+  rank: number | null
+  projectUrl: string | null
+}
+
+function buildUnifiedRows(
+  round1: LeaderboardEntry[],
+  round2: LeaderboardEntry[],
+  final: LeaderboardEntry[],
+  projectByCode: Map<string, string>
+): UnifiedRow[] {
+  const byTeam = new Map<string, UnifiedRow>()
+  const ensure = (r: LeaderboardEntry) => {
+    if (!r.team_id) return null
+    let row = byTeam.get(r.team_id)
+    if (!row) {
+      row = {
+        teamId: r.team_id,
+        teamCode: r.team_code ?? "—",
+        teamName: r.team_name ?? "Unnamed team",
+        quiz: null,
+        ocRound: null,
+        total: null,
+        rank: null,
+        projectUrl: r.team_code ? projectByCode.get(r.team_code) ?? null : null,
+      }
+      byTeam.set(r.team_id, row)
+    }
+    return row
+  }
+  for (const r of round2) {
+    const row = ensure(r)
+    if (row) row.quiz = r.total_score
+  }
+  for (const r of round1) {
+    const row = ensure(r)
+    if (row) row.ocRound = r.total_score
+  }
+  for (const r of final) {
+    const row = ensure(r)
+    if (row) {
+      row.total = r.total_score
+      row.rank = r.rank
+    }
+  }
+  return [...byTeam.values()].sort(
+    (a, b) => (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER) || (b.total ?? 0) - (a.total ?? 0)
+  )
+}
+
+function UnifiedLeaderboard({ rows }: { rows: UnifiedRow[] }) {
   return (
     <section>
-      <SectionHeading kicker={kicker} title={title} description={description} />
+      <SectionHeading
+        kicker="LEADERBOARD"
+        title="Every round, one table"
+        description="Quiz (10%) + OC Round (20%) + Senior Final (70%, folded into Total). A column shows 🔒 until that round's score is entered and published."
+      />
       {rows.length === 0 ? (
-        <EmptyState icon="🔒" title="Revealed after judging" description="Scores unlock here the moment the judges submit them." />
+        <EmptyState icon="🔒" title="Nothing published yet" description="Rows appear here the moment any round is scored and published." />
       ) : (
         <Card className="overflow-hidden">
-          <div className="hidden grid-cols-[3.5rem_6rem_minmax(0,1fr)_5.5rem_minmax(9rem,13rem)] gap-4 border-b border-slate-800/70 px-5 py-3 md:grid">
+          <div className="hidden grid-cols-[3.5rem_6rem_minmax(0,1fr)_5rem_5rem_5.5rem_7rem] gap-4 border-b border-slate-800/70 px-5 py-3 md:grid">
             <span className="hud-label">#</span>
             <span className="hud-label">CODE</span>
             <span className="hud-label">TEAM</span>
-            <span className="hud-label text-right">SCORE</span>
-            <span className="hud-label">NOTES</span>
+            <span className="hud-label text-right">QUIZ</span>
+            <span className="hud-label text-right">OC ROUND</span>
+            <span className="hud-label text-right">TOTAL</span>
+            <span className="hud-label">PROJECT</span>
           </div>
           <div className="divide-y divide-slate-800/50">
             {rows.map((r, i) => {
               const rank = r.rank ?? i + 1
               return (
                 <div
-                  key={r.team_id ?? `${r.team_code}-${i}`}
-                  className={`grid grid-cols-[2.5rem_1fr_4.5rem] items-center gap-x-3 gap-y-1 px-4 py-3.5 md:grid-cols-[3.5rem_6rem_minmax(0,1fr)_5.5rem_minmax(9rem,13rem)] md:gap-4 md:px-5 ${rankTint(rank)}`}
+                  key={r.teamId}
+                  className={`grid grid-cols-[2.5rem_1fr_4.5rem] items-center gap-x-3 gap-y-1 px-4 py-3.5 md:grid-cols-[3.5rem_6rem_minmax(0,1fr)_5rem_5rem_5.5rem_7rem] md:gap-4 md:px-5 ${rankTint(rank)}`}
                 >
                   <span className={`font-mono text-sm font-bold ${rankColor(rank)}`}>{String(rank).padStart(2, "0")}</span>
-                  <span className="hidden font-mono text-xs tracking-wide text-cyan-300/70 md:block">{r.team_code ?? "—"}</span>
+                  <span className="hidden font-mono text-xs tracking-wide text-cyan-300/70 md:block">{r.teamCode}</span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-100">{r.team_name ?? "Unnamed team"}</p>
-                    <p className="font-mono text-[11px] text-slate-500 md:hidden">{r.team_code ?? "—"}</p>
+                    <p className="truncate text-lg font-semibold text-slate-100">{r.teamName}</p>
+                    <p className="font-mono text-[11px] text-slate-500 md:hidden">{r.teamCode}</p>
                   </div>
-                  <span className="text-right font-mono text-sm font-semibold tabular-nums text-slate-200">
-                    {r.total_score === null ? "—" : r.total_score}
+                  <span className="text-right font-mono text-sm tabular-nums text-slate-300">{r.quiz === null ? "🔒" : r.quiz}</span>
+                  <span className="text-right font-mono text-sm tabular-nums text-slate-300">{r.ocRound === null ? "🔒" : r.ocRound}</span>
+                  <span className="text-right font-mono text-sm font-semibold tabular-nums text-slate-100">
+                    {r.total === null ? "🔒" : r.total}
                   </span>
-                  {r.notes ? <p className="col-span-3 truncate text-xs text-slate-500 md:col-span-1">{r.notes}</p> : null}
+                  {r.projectUrl ? (
+                    <a href={r.projectUrl} target="_blank" rel="noreferrer" className="col-span-3 truncate text-xs text-accent-hover hover:underline md:col-span-1">
+                      View project →
+                    </a>
+                  ) : (
+                    <span className="col-span-3 text-xs text-muted/40 md:col-span-1">—</span>
+                  )}
                 </div>
               )
             })}
@@ -134,16 +194,21 @@ function RoundBoard({
 export default async function LeaderboardPage() {
   await requireAdminPage()
   const supabase = await createClient()
-  const [round1Res, round2Res, finalRes, winnersRes] = await Promise.all([
+  const [round1Res, round2Res, finalRes, winnersRes, projectsRes] = await Promise.all([
     supabase.from("leaderboard_round1_public").select("*"),
     supabase.from("leaderboard_round2_public").select("*"),
     supabase.from("leaderboard_final_public").select("*"),
     supabase.from("winners_public").select("*"),
+    supabase.from("project_pages_public").select("team_code"),
   ])
 
   const round1 = sortRows(round1Res.data ?? [])
   const round2 = sortRows(round2Res.data ?? [])
   const final = sortRows(finalRes.data ?? [])
+  const projectByCode = new Map(
+    (projectsRes.data ?? []).filter((p) => p.team_code).map((p) => [p.team_code as string, `/projects/${p.team_code}`])
+  )
+  const unifiedRows = buildUnifiedRows(round1, round2, final, projectByCode)
   const winnerRows = (winnersRes.data ?? [])
     .filter((w) => w.body != null)
     .sort((a, b) => (b.published_at ?? "").localeCompare(a.published_at ?? ""))
@@ -168,26 +233,7 @@ export default async function LeaderboardPage() {
         </section>
       ) : null}
 
-      <RoundBoard
-        kicker="ROUND 1 · 20%"
-        title="OC Round 1 — Concept & Pitch"
-        description="Deck and prototype round, judged by the OC. Counts 20% toward the final ranking."
-        rows={round1}
-      />
-
-      <RoundBoard
-        kicker="ROUND 2 · 10%"
-        title="Quiz Round"
-        description="The on-stage quiz. Counts 10% toward the final ranking."
-        rows={round2}
-      />
-
-      <RoundBoard
-        kicker="FINAL · 70%"
-        title="Senior Final Evaluation — Weighted Score"
-        description="The final ranking: 20% OC Round 1 + 10% Quiz + 70% Senior Final Evaluation. A missing round counts as 0."
-        rows={final}
-      />
+      <UnifiedLeaderboard rows={unifiedRows} />
     </div>
   )
 }

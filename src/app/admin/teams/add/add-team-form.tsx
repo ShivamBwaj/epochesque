@@ -1,20 +1,23 @@
 "use client"
 
 import { useActionState, useState } from "react"
-import { addTeamManualAction } from "@/lib/actions/admin"
-import type { AddTeamResult } from "@/lib/actions/admin"
+import { adminWalkinTeamAction } from "@/lib/actions/admin"
+import type { AdminCreateTeamResult } from "@/lib/actions/admin"
 import { SubmitButton } from "@/components/submit-button"
 import { CopyField } from "@/components/copy-field"
 import { Alert, Button, Card, Input, Label } from "@/components/ui"
 
-type ExtraMember = { name: string; email: string; phone: string; college: string }
+type Person = { name: string; regNo: string; phone: string; email: string }
+
+const EMPTY_PERSON: Person = { name: "", regNo: "", phone: "", email: "" }
 
 export function AddTeamForm() {
-  const [state, formAction] = useActionState<AddTeamResult, FormData>(addTeamManualAction, { ok: false })
-  const [extras, setExtras] = useState<ExtraMember[]>([])
+  const [state, formAction] = useActionState<AdminCreateTeamResult, FormData>(adminWalkinTeamAction, { ok: false })
+  const [teamName, setTeamName] = useState("")
+  const [people, setPeople] = useState<Person[]>([{ ...EMPTY_PERSON }, { ...EMPTY_PERSON }])
 
-  const update = (i: number, patch: Partial<ExtraMember>) =>
-    setExtras((xs) => xs.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+  const update = (i: number, patch: Partial<Person>) =>
+    setPeople((ps) => ps.map((p, j) => (j === i ? { ...p, ...patch } : p)))
 
   return (
     <div className="space-y-6">
@@ -23,7 +26,9 @@ export function AddTeamForm() {
       {state.ok && state.team_code ? (
         <Card className="p-5">
           <Alert tone="success">
-            {state.message} No password to hand out — they go to <code className="font-mono text-accent-hover">/login</code>, enter their email, and set their own password on first sign-in.
+            {state.message} Anyone with an email on file signs up themselves at{" "}
+            <code className="font-mono text-accent-hover">/login/setup</code> with their registration number and email — no
+            password to hand out. Members with no email yet can&apos;t self-signup until you add one.
           </Alert>
           <div className="mt-4">
             <CopyField value={state.team_code} label="team code" />
@@ -38,86 +43,68 @@ export function AddTeamForm() {
         <form action={formAction} className="space-y-6">
           <Card className="p-5 md:p-6">
             <p className="hud-label mb-4">TEAM</p>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="teamName">Team name *</Label>
-                <Input id="teamName" name="teamName" maxLength={120} placeholder="Team Volt" required />
-              </div>
-              <div>
-                <Label htmlFor="teamCode">Team code (optional — auto-generated if blank)</Label>
-                <Input id="teamCode" name="teamCode" maxLength={24} placeholder="T-101" />
-              </div>
+            <div>
+              <Label htmlFor="teamName">Team name *</Label>
+              <Input
+                id="teamName"
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+                maxLength={120}
+                placeholder="Team Volt"
+                required
+              />
             </div>
           </Card>
 
           <Card className="p-5 md:p-6">
-            <p className="hud-label mb-4">LEADER (THIS IS THE LOGIN ACCOUNT)</p>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="leaderName">Leader name *</Label>
-                <Input id="leaderName" name="leaderName" maxLength={120} placeholder="Full name" required />
-              </div>
-              <div>
-                <Label htmlFor="leaderEmail">Leader email *</Label>
-                <Input id="leaderEmail" name="leaderEmail" type="email" placeholder="leader@team.edu" required />
-              </div>
-              <div>
-                <Label htmlFor="leaderPhone">Phone</Label>
-                <Input id="leaderPhone" name="leaderPhone" maxLength={20} placeholder="Optional" />
-              </div>
-              <div>
-                <Label htmlFor="leaderCollege">College</Label>
-                <Input id="leaderCollege" name="leaderCollege" maxLength={120} placeholder="Optional" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-5 md:p-6">
-            <p className="hud-label mb-4">ADDITIONAL MEMBERS (OPTIONAL)</p>
-            {extras.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No extra members yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {extras.map((m, i) => (
-                  <div key={i} className="grid gap-3 rounded-lg border border-white/[0.06] bg-surface/50 p-3 md:grid-cols-[1fr_1fr_0.7fr_1fr_auto] md:items-end">
-                    <div>
-                      <Label htmlFor={`m-name-${i}`}>Name</Label>
-                      <Input id={`m-name-${i}`} value={m.name} maxLength={120} onChange={(e) => update(i, { name: e.target.value })} />
-                    </div>
-                    <div>
-                      <Label htmlFor={`m-email-${i}`}>Email</Label>
-                      <Input id={`m-email-${i}`} type="email" value={m.email} onChange={(e) => update(i, { email: e.target.value })} />
-                    </div>
-                    <div>
-                      <Label htmlFor={`m-phone-${i}`}>Phone</Label>
-                      <Input id={`m-phone-${i}`} value={m.phone} maxLength={20} onChange={(e) => update(i, { phone: e.target.value })} />
-                    </div>
-                    <div>
-                      <Label htmlFor={`m-college-${i}`}>College</Label>
-                      <Input id={`m-college-${i}`} value={m.college} maxLength={120} onChange={(e) => update(i, { college: e.target.value })} />
-                    </div>
-                    <Button type="button" variant="danger" size="sm" onClick={() => setExtras((xs) => xs.filter((_, j) => j !== i))}>
-                      Remove
-                    </Button>
+            <p className="hud-label mb-4">MEMBERS (2-4)</p>
+            <div className="space-y-3">
+              {people.map((p, i) => (
+                <div key={i} className="grid gap-3 rounded-lg border border-white/[0.06] bg-surface/50 p-3 md:grid-cols-[1fr_1fr_0.8fr_1fr_auto] md:items-end">
+                  <div>
+                    <Label htmlFor={`p-name-${i}`}>Name *</Label>
+                    <Input id={`p-name-${i}`} value={p.name} maxLength={120} onChange={(e) => update(i, { name: e.target.value })} required />
                   </div>
-                ))}
-              </div>
-            )}
+                  <div>
+                    <Label htmlFor={`p-regno-${i}`}>Reg no *</Label>
+                    <Input id={`p-regno-${i}`} value={p.regNo} maxLength={30} onChange={(e) => update(i, { regNo: e.target.value })} required />
+                  </div>
+                  <div>
+                    <Label htmlFor={`p-phone-${i}`}>Phone</Label>
+                    <Input id={`p-phone-${i}`} value={p.phone} maxLength={20} onChange={(e) => update(i, { phone: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label htmlFor={`p-email-${i}`}>Email (optional)</Label>
+                    <Input id={`p-email-${i}`} type="email" value={p.email} onChange={(e) => update(i, { email: e.target.value })} />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    disabled={people.length <= 2}
+                    onClick={() => setPeople((ps) => ps.filter((_, j) => j !== i))}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
             <div className="mt-4">
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => setExtras((xs) => [...xs, { name: "", email: "", phone: "", college: "" }])}
+                disabled={people.length >= 4}
+                onClick={() => setPeople((ps) => [...ps, { ...EMPTY_PERSON }])}
               >
                 + Add member
               </Button>
             </div>
-            <input type="hidden" name="members" value={JSON.stringify(extras)} />
+            <input type="hidden" name="people" value={JSON.stringify(people)} />
           </Card>
 
           <SubmitButton size="lg" pendingText="Creating team…">
-            Create team & generate login
+            Register &amp; create team
           </SubmitButton>
         </form>
       )}

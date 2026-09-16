@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { getSessionUser, isAdmin } from "@/lib/auth"
-import type { TeamMember, WinnersEntry } from "@/lib/database.types"
+import type { WinnersEntry } from "@/lib/database.types"
 import type { RollResult } from "@/components/case-opener"
-import { genPlaceholderPassword } from "@/lib/csv"
 import { queueRosterChangeResync } from "@/lib/actions/attendance"
+import { pushScoresToSheets, setScoresSheetsWebhookUrl, scoresSheetsWebhookConfigured, type SheetsScoreRow } from "@/lib/sheets"
+import { after } from "next/server"
 import { sanitizeFileName, imageFileError, imageMagicError } from "@/lib/validate"
 import type { User } from "@supabase/supabase-js"
 
@@ -15,28 +16,6 @@ export interface ActionResult {
   ok: boolean
   error?: string
   message?: string
-}
-
-export interface ImportPayloadTeam {
-  key: string
-  team_code: string
-  team_name: string
-  leaderIndex: number
-  members: {
-    member_id: string | null
-    name: string
-    email: string | null
-    phone: string | null
-    college: string | null
-    payment_status: string | null
-    college_type: string | null
-  }[]
-}
-
-export interface ImportResult extends ActionResult {
-  credentials?: { team_code: string; team_name: string; email: string }[]
-  createdCount?: number
-  errors?: string[]
 }
 
 export type ResetPasswordResult = ActionResult
@@ -105,227 +84,319 @@ export async function adminRollForTeamAction(teamId: string): Promise<RollResult
   return ps ? { ok: true, ps } : { ok: false, error: "Could not roll. Try again." }
 }
 
-export async function importTeamsConfirmAction(_prev: ImportResult, formData: FormData): Promise<ImportResult> {
+export interface AddRegistrationResult extends ActionResult {
+  registrationId?: string
+}
+
+// On-spot registration: OC types someone in directly (no register-site form,
+// no waiting for the sheet poll). They can self-serve signup with this reg_no
+// immediately, or an admin can fold them straight into a walk-in team below.
+export async function adminAddRegistrationAction(_prev: AddRegistrationResult, formData: FormData): Promise<AddRegistrationResult> {
   const user = await requireAdminAction()
   if (!user) return { ok: false, error: "Admins only." }
 
-  let teams: ImportPayloadTeam[]
-  try {
-    teams = JSON.parse(String(formData.get("payload") ?? "[]"))
-    if (!Array.isArray(teams) || teams.length === 0) throw new Error("empty")
-    if (teams.length > 500) throw new Error("too many")
-  } catch {
-    return { ok: false, error: "Invalid import payload. Re-upload the CSV." }
-  }
+  const name = String(formData.get("name") ?? "").trim().slice(0, 120)
+  const regNo = String(formData.get("regNo") ?? "").trim().toUpperCase().slice(0, 30)
+  const phone = String(formData.get("phone") ?? "").trim().slice(0, 20)
+  const email = String(formData.get("email") ?? "").trim().toLowerCase()
+
+  if (!name) return { ok: false, error: "Name is required." }
+  if (!regNo) return { ok: false, error: "Registration number is required." }
+  if (email && !EMAIL_RE.test(email)) return { ok: false, error: "That email doesn't look right — leave it blank or fix it." }
 
   const admin = createAdminClient()
-  const { data: existingCodes } = await admin.from("teams").select("team_code")
-  const takenCodes = new Set((existingCodes ?? []).map((r) => r.team_code.toLowerCase()))
-  const { data: existingTeams } = await admin.from("teams").select("leader_email")
-  const takenEmails = new Set((existingTeams ?? []).map((r) => r.leader_email.toLowerCase()))
-
-  const credentials: ImportResult["credentials"] = []
-  const errors: string[] = []
-  let created = 0
-
-  for (const t of teams) {
-    const label = t.team_name || t.key || "team"
-    const leaderIdx = Number(t.leaderIndex)
-    const members = Array.isArray(t.members) ? t.members : []
-    const leader = Number.isInteger(leaderIdx) ? members[leaderIdx] : undefined
-    const leaderEmail = leader?.email?.toLowerCase() ?? ""
-
-    if (!leader || !EMAIL_RE.test(leaderEmail)) {
-      errors.push(`${label}: leader has no valid email — skipped`)
-      continue
-    }
-    if (takenEmails.has(leaderEmail)) {
-      errors.push(`${label}: ${leaderEmail} already has an account — skipped`)
-      continue
-    }
-
-    let code = (t.team_code || `T-${sanitizeFileName(t.key) || created + 1}`).slice(0, 30)
-    let candidate = code
-    let n = 2
-    while (takenCodes.has(candidate.toLowerCase())) candidate = `${code}-${n++}`
-    code = candidate
-
-    const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
-      email: leaderEmail,
-      password: genPlaceholderPassword(),
-      email_confirm: true,
-      user_metadata: { team_code: code, role: "team" },
-    })
-    if (authErr || !authUser?.user) {
-      errors.push(`${label}: ${authErr?.message ?? "could not create login"}`)
-      continue
-    }
-
-    const membersJson: TeamMember[] = members.map((m) => ({
-      member_id: m.member_id ?? null,
-      name: String(m.name ?? "").slice(0, 120),
-      email: m.email ?? null,
-      phone: m.phone ?? null,
-      college: m.college ?? null,
-      payment_status: m.payment_status ?? null,
-      college_type: m.college_type ?? null,
-    }))
-
-    const { error: teamErr } = await admin.from("teams").insert({
-      team_code: code,
-      team_name: String(t.team_name || label).slice(0, 120),
-      members: membersJson as never,
-      leader_email: leaderEmail,
-      auth_user_id: authUser.user.id,
-      status: "registered",
-      password_set: false,
-    })
-    if (teamErr) {
-      await admin.auth.admin.deleteUser(authUser.user.id).catch(() => {})
-      errors.push(`${label}: ${teamErr.message}`)
-      continue
-    }
-
-    takenCodes.add(code.toLowerCase())
-    takenEmails.add(leaderEmail)
-    credentials.push({ team_code: code, team_name: t.team_name || label, email: leaderEmail })
-    created++
+  const { data, error } = await admin
+    .from("registrations")
+    .insert({ name, reg_no: regNo, phone, email })
+    .select("id")
+    .single()
+  if (error) {
+    return { ok: false, error: error.message.includes("duplicate") ? `Registration number ${regNo} already exists.` : error.message }
   }
 
-  await audit(admin, user, "teams.import", `${created} teams`, { created, skipped: errors.length })
-
-  if (created > 0) await queueRosterChangeResync()
-
+  await audit(admin, user, "registration.add_walkin", regNo, { name, email })
+  await queueRosterChangeResync()
   revalidatePath("/admin/teams")
-  revalidatePath("/admin/round1")
-  return { ok: created > 0, createdCount: created, credentials, errors }
+  return {
+    ok: true,
+    registrationId: data.id,
+    message: email
+      ? `${name} (${regNo}) registered.`
+      : `${name} (${regNo}) registered — no email yet, so they can't self-signup until one's added.`,
+  }
 }
 
-export async function updateTeamLeaderEmailAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  const user = await requireAdminAction()
-  if (!user) return { ok: false, error: "Admins only." }
-
-  const teamId = String(formData.get("teamId") ?? "")
-  const newEmail = String(formData.get("email") ?? "").trim().toLowerCase()
-  if (!teamId) return { ok: false, error: "Missing team." }
-  if (!EMAIL_RE.test(newEmail)) return { ok: false, error: "Enter a valid email address." }
-
-  const admin = createAdminClient()
-  const { data: team } = await admin.from("teams").select("auth_user_id, team_code, leader_email, members").eq("id", teamId).maybeSingle()
-  if (!team) return { ok: false, error: "Team not found." }
-  if (team.leader_email === newEmail) return { ok: false, error: "That is already the leader's email." }
-  if (!team.auth_user_id) return { ok: false, error: "Team has no linked login." }
-
-  const { data: clash } = await admin.from("teams").select("team_code").eq("leader_email", newEmail).maybeSingle()
-  if (clash) return { ok: false, error: `That email already belongs to ${clash.team_code}.` }
-
-  const { error: authErr } = await admin.auth.admin.updateUserById(team.auth_user_id, { email: newEmail, email_confirm: true })
-  if (authErr) return { ok: false, error: authErr.message }
-
-  const members = Array.isArray(team.members) ? (team.members as unknown as TeamMember[]) : []
-  const fixedMembers = members.some((m) => m.email === newEmail)
-    ? members
-    : members.map((m) => (m.email === team.leader_email ? { ...m, email: newEmail } : m))
-
-  const { error: dbErr } = await admin
-    .from("teams")
-    .update({ leader_email: newEmail, members: (fixedMembers.length > 0 ? fixedMembers : members) as never })
-    .eq("id", teamId)
-  if (dbErr) return { ok: false, error: dbErr.message }
-
-  await audit(admin, user, "team.leader_email", team.team_code, { from: team.leader_email, to: newEmail })
-  revalidatePath("/admin/teams")
-  return { ok: true, message: `Leader email for ${team.team_code} is now ${newEmail}. Their password is unchanged.` }
-}
-
-export interface ManualMemberInput {
-  name: string
-  email?: string | null
-  phone?: string | null
-  college?: string | null
-}
-
-export interface AddTeamResult extends ActionResult {
+export interface AdminCreateTeamResult extends ActionResult {
   team_code?: string
 }
 
-export async function addTeamManualAction(_prev: AddTeamResult, formData: FormData): Promise<AddTeamResult> {
+export async function adminCreateTeamAction(_prev: AdminCreateTeamResult, formData: FormData): Promise<AdminCreateTeamResult> {
   const user = await requireAdminAction()
   if (!user) return { ok: false, error: "Admins only." }
 
   const teamName = String(formData.get("teamName") ?? "").trim().slice(0, 120)
-  const leaderName = String(formData.get("leaderName") ?? "").trim().slice(0, 120)
-  const leaderEmail = String(formData.get("leaderEmail") ?? "").trim().toLowerCase()
-  const leaderPhone = String(formData.get("leaderPhone") ?? "").trim().slice(0, 20) || null
-  const leaderCollege = String(formData.get("leaderCollege") ?? "").trim().slice(0, 120) || null
-
-  if (!teamName) return { ok: false, error: "Team name is required." }
-  if (!leaderName) return { ok: false, error: "Leader name is required." }
-  if (!EMAIL_RE.test(leaderEmail)) return { ok: false, error: "Enter a valid leader email." }
-
-  let extraMembers: ManualMemberInput[] = []
+  let registrationIds: string[] = []
   try {
-    extraMembers = JSON.parse(String(formData.get("members") ?? "[]"))
-    if (!Array.isArray(extraMembers) || extraMembers.length > 10) throw new Error()
+    registrationIds = JSON.parse(String(formData.get("registrationIds") ?? "[]"))
+    if (!Array.isArray(registrationIds)) throw new Error()
   } catch {
-    return { ok: false, error: "Invalid members data." }
+    return { ok: false, error: "Invalid member selection." }
   }
+  if (!teamName) return { ok: false, error: "Team name is required." }
+  if (registrationIds.length < 2 || registrationIds.length > 4) return { ok: false, error: "Teams must have 2-4 members." }
 
   const admin = createAdminClient()
-  const { data: clash } = await admin.from("teams").select("team_code").eq("leader_email", leaderEmail).maybeSingle()
-  if (clash) return { ok: false, error: `That email already belongs to ${clash.team_code}.` }
-
-  let teamCode = String(formData.get("teamCode") ?? "").trim().replace(/[^A-Za-z0-9-]/g, "").slice(0, 24)
-  if (!teamCode) {
-    const { count } = await admin.from("teams").select("id", { count: "exact", head: true })
-    teamCode = `T-${String((count ?? 0) + 1).padStart(3, "0")}`
-  }
-  const { data: codeClash } = await admin.from("teams").select("team_code").eq("team_code", teamCode).maybeSingle()
-  if (codeClash) return { ok: false, error: `Team code ${teamCode} is already taken — pick another.` }
-
-  const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
-    email: leaderEmail,
-    password: genPlaceholderPassword(),
-    email_confirm: true,
-    user_metadata: { team_code: teamCode, role: "team" },
+  const { data, error } = await admin.rpc("admin_create_team_with_members", {
+    p_team_name: teamName,
+    p_registration_ids: registrationIds,
   })
-  if (authErr || !authUser?.user) return { ok: false, error: authErr?.message ?? "Could not create login." }
-
-  const membersJson: TeamMember[] = [
-    { name: leaderName, email: leaderEmail, phone: leaderPhone, college: leaderCollege },
-    ...extraMembers
-      .filter((m) => m && String(m.name ?? "").trim())
-      .map((m) => ({
-        name: String(m.name).trim().slice(0, 120),
-        email: m.email ? String(m.email).trim().toLowerCase() : null,
-        phone: m.phone ? String(m.phone).trim().slice(0, 20) : null,
-        college: m.college ? String(m.college).trim().slice(0, 120) : null,
-      })),
-  ]
-
-  const { error: teamErr } = await admin.from("teams").insert({
-    team_code: teamCode,
-    team_name: teamName,
-    members: membersJson as never,
-    leader_email: leaderEmail,
-    auth_user_id: authUser.user.id,
-    status: "registered",
-    password_set: false,
-  })
-  if (teamErr) {
-    await admin.auth.admin.deleteUser(authUser.user.id).catch(() => {})
-    return { ok: false, error: teamErr.message }
+  if (error) {
+    const msg = error.message.includes("ALREADY_ON_A_TEAM")
+      ? "One of the selected people is already on a team."
+      : error.message.includes("REGISTRATION_NOT_FOUND")
+        ? "One of the selected people couldn't be found."
+        : "Could not create the team."
+    return { ok: false, error: msg }
   }
 
-  await audit(admin, user, "team.add_manual", teamCode, { leader: leaderEmail })
+  await audit(admin, user, "team.add_walkin", data?.team_code ?? teamName, { members: registrationIds.length })
   await queueRosterChangeResync()
   revalidatePath("/admin/teams")
-  revalidatePath("/admin/round1")
-  return {
-    ok: true,
-    team_code: teamCode,
-    message: `Team ${teamCode} created. Tell ${leaderEmail} to go to /login and set their password — first login prompts them for it.`,
+  return { ok: true, team_code: data?.team_code, message: `Team ${data?.team_code} created.` }
+}
+
+export interface WalkinPersonInput {
+  name: string
+  regNo: string
+  phone: string
+  email: string
+}
+
+// One-stop walk-in desk tool: registers (or reuses) each person's
+// registration row, then forms a team from them in one go — for people who
+// show up on the day with no prior registration and want to be teamed up
+// on the spot.
+export async function adminWalkinTeamAction(_prev: AdminCreateTeamResult, formData: FormData): Promise<AdminCreateTeamResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+
+  const teamName = String(formData.get("teamName") ?? "").trim().slice(0, 120)
+  let people: WalkinPersonInput[]
+  try {
+    people = JSON.parse(String(formData.get("people") ?? "[]"))
+    if (!Array.isArray(people)) throw new Error()
+  } catch {
+    return { ok: false, error: "Invalid member data." }
   }
+  if (!teamName) return { ok: false, error: "Team name is required." }
+  if (people.length < 2 || people.length > 4) return { ok: false, error: "Teams must have 2-4 members." }
+
+  const admin = createAdminClient()
+  const registrationIds: string[] = []
+
+  for (const p of people) {
+    const name = String(p.name ?? "").trim().slice(0, 120)
+    const regNo = String(p.regNo ?? "").trim().toUpperCase().slice(0, 30)
+    const phone = String(p.phone ?? "").trim().slice(0, 20)
+    const email = String(p.email ?? "").trim().toLowerCase()
+    if (!name || !regNo) return { ok: false, error: `Every member needs a name and registration number (missing for one entry).` }
+    if (email && !EMAIL_RE.test(email)) return { ok: false, error: `That email doesn't look right for ${name || regNo} — leave it blank or fix it.` }
+
+    const { data: existing } = await admin.from("registrations").select("id").eq("reg_no", regNo).maybeSingle()
+    if (existing) {
+      registrationIds.push(existing.id)
+      continue
+    }
+    const { data: created, error: insertErr } = await admin
+      .from("registrations")
+      .insert({ name, reg_no: regNo, phone, email })
+      .select("id")
+      .single()
+    if (insertErr || !created) return { ok: false, error: `Could not register ${name} (${regNo}).` }
+    registrationIds.push(created.id)
+  }
+
+  const { data: team, error } = await admin.rpc("admin_create_team_with_members", {
+    p_team_name: teamName,
+    p_registration_ids: registrationIds,
+  })
+  if (error) {
+    const msg = error.message.includes("ALREADY_ON_A_TEAM")
+      ? "One of these people is already on a team."
+      : "Could not create the team."
+    return { ok: false, error: msg }
+  }
+
+  await audit(admin, user, "team.add_walkin", team?.team_code ?? teamName, { members: people.length })
+  await queueRosterChangeResync()
+  revalidatePath("/admin/teams")
+  return { ok: true, team_code: team?.team_code, message: `Team ${team?.team_code} created with ${people.length} members.` }
+}
+
+export async function adminMoveTeamMemberAction(formData: FormData): Promise<ActionResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+
+  const registrationId = String(formData.get("registrationId") ?? "")
+  const newTeamIdRaw = String(formData.get("newTeamId") ?? "")
+  if (!registrationId) return { ok: false, error: "Missing registration." }
+  if (newTeamIdRaw === "__noop__") return { ok: true }
+  const newTeamId = newTeamIdRaw === "__unassign__" ? null : newTeamIdRaw
+
+  const admin = createAdminClient()
+  const { error } = await admin.rpc("admin_move_team_member", { p_registration_id: registrationId, p_new_team_id: newTeamId })
+  if (error) {
+    const msg = error.message.includes("TEAM_FULL") ? "That team already has 4 members." : "Could not move that person."
+    return { ok: false, error: msg }
+  }
+
+  await audit(admin, user, "team_member.move", registrationId, { newTeamId })
+  await queueRosterChangeResync()
+  revalidatePath("/admin/teams")
+  return { ok: true }
+}
+
+export async function connectScoresSheetsWebhookAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+
+  const url = String(formData.get("webhookUrl") ?? "").trim()
+  if (!url) return { ok: false, error: "Paste the Apps Script web app URL first." }
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(url)) {
+    return { ok: false, error: "That doesn't look like a Google Apps Script web app URL (should end in /exec)." }
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "scores.resync", rows: [] }),
+      signal: AbortSignal.timeout(15000),
+    })
+    if (!res.ok) return { ok: false, error: `Sheet did not confirm (HTTP ${res.status}). Check the Apps Script deployment (Execute as: Me, Access: Anyone) and try again.` }
+  } catch (err) {
+    const timedOut = err instanceof Error && err.name === "TimeoutError"
+    return {
+      ok: false,
+      error: timedOut
+        ? "The sheet took too long to respond (Apps Script cold start). This is usually a one-off — try Connect again."
+        : "Could not reach that URL. Check it's the deployed web app URL and try again.",
+    }
+  }
+
+  await setScoresSheetsWebhookUrl(url)
+  const admin = createAdminClient()
+  await audit(admin, user, "scores.sheets_connect", "webhook")
+
+  for (const round of ROUNDS) {
+    const rows = await buildScoresSheetRows(admin, round)
+    await pushScoresToSheets("scores.resync", rows)
+  }
+
+  revalidatePath("/admin/scoring")
+  return { ok: true, message: "Connected — every save, import, or publish now mirrors to the sheet." }
+}
+
+export async function disconnectScoresSheetsWebhookAction(): Promise<void> {
+  const user = await requireAdminAction()
+  if (!user) return
+  await setScoresSheetsWebhookUrl(null)
+  const admin = createAdminClient()
+  await audit(admin, user, "scores.sheets_disconnect", "webhook")
+  revalidatePath("/admin/scoring")
+}
+
+export async function resyncScoresToSheetsAction(round: string): Promise<ActionResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+  if (!ROUNDS.includes(round as Round)) return { ok: false, error: "Invalid round." }
+  if (!(await scoresSheetsWebhookConfigured())) return { ok: false, error: "No Google Sheet connected yet — connect one above." }
+
+  const admin = createAdminClient()
+  const rows = await buildScoresSheetRows(admin, round)
+  const ok = await pushScoresToSheets("scores.resync", rows)
+  if (!ok) return { ok: false, error: "The sheet did not confirm the sync. Check the Apps Script deployment and try again." }
+
+  await audit(admin, user, "scores.sheets_resync", round, { rows: rows.length })
+  revalidatePath("/admin/scoring")
+  return { ok: true }
+}
+
+const TEMPLATE_EXTS = [".ppt", ".pptx", ".pdf"]
+const MAX_TEMPLATE_BYTES = 30 * 1024 * 1024
+
+export interface UploadPptTemplateResult extends ActionResult {
+  path?: string
+}
+
+export async function uploadPptTemplateAction(_prev: UploadPptTemplateResult, formData: FormData): Promise<UploadPptTemplateResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+
+  const file = formData.get("file")
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Choose a file to upload." }
+
+  const lower = file.name.toLowerCase()
+  const ext = TEMPLATE_EXTS.find((e) => lower.endsWith(e))
+  if (!ext) return { ok: false, error: "Only .ppt, .pptx or .pdf files are allowed." }
+  if (file.size > MAX_TEMPLATE_BYTES) return { ok: false, error: "File is larger than 30 MB." }
+
+  const admin = createAdminClient()
+  const { data: existing } = await admin.from("event_settings").select("value").eq("key", "ppt_template_path").maybeSingle()
+  const oldPath = typeof existing?.value === "string" ? existing.value : null
+
+  const path = `template${ext}`
+  const { error: upErr } = await admin.storage.from("templates").upload(path, file, { upsert: true })
+  if (upErr) return { ok: false, error: "Upload failed. Try again." }
+
+  if (oldPath && oldPath !== path) {
+    await admin.storage.from("templates").remove([oldPath]).catch(() => {})
+  }
+
+  await admin.from("event_settings").upsert({ key: "ppt_template_path", value: path as never }, { onConflict: "key" })
+  await audit(admin, user, "ppt_template.upload", path, { fileName: sanitizeFileName(file.name), size: file.size })
+  revalidatePath("/admin/settings")
+  revalidatePath("/dashboard/submit/round1")
+  return { ok: true, path, message: "Template updated — teams will see the new file immediately." }
+}
+
+export async function setCertificatesPublishedAction(formData: FormData): Promise<void> {
+  const user = await requireAdminAction()
+  if (!user) return
+  const published = String(formData.get("published") ?? "") === "true"
+  const admin = createAdminClient()
+  await admin.from("event_settings").upsert({ key: "certificates_published", value: published as never }, { onConflict: "key" })
+  await audit(admin, user, published ? "certificates.publish" : "certificates.unpublish")
+  revalidatePath("/admin/settings")
+  revalidatePath("/dashboard")
+}
+
+export async function setProjectsPublishedAction(formData: FormData): Promise<void> {
+  const user = await requireAdminAction()
+  if (!user) return
+  const published = String(formData.get("published") ?? "") === "true"
+  const admin = createAdminClient()
+  await admin.from("event_settings").upsert({ key: "projects_published", value: published as never }, { onConflict: "key" })
+  await audit(admin, user, published ? "projects.publish" : "projects.unpublish")
+  revalidatePath("/admin/settings")
+  revalidatePath("/leaderboard")
+}
+
+export async function adminSetTeamLeaderAction(formData: FormData): Promise<ActionResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+
+  const teamId = String(formData.get("teamId") ?? "")
+  const registrationId = String(formData.get("registrationId") ?? "")
+  if (!teamId || !registrationId) return { ok: false, error: "Missing team or member." }
+
+  const admin = createAdminClient()
+  const { error } = await admin.rpc("admin_set_team_leader", { p_team_id: teamId, p_registration_id: registrationId })
+  if (error) return { ok: false, error: "Could not set leader." }
+
+  await audit(admin, user, "team.set_leader", teamId, { registrationId })
+  revalidatePath("/admin/teams")
+  return { ok: true }
 }
 
 export async function setRollOpenAction(formData: FormData): Promise<void> {
@@ -364,28 +435,25 @@ export async function setGamingOpenAction(formData: FormData): Promise<void> {
   revalidatePath("/dashboard")
 }
 
-export async function resetTeamPasswordAction(_prev: ResetPasswordResult, formData: FormData): Promise<ResetPasswordResult> {
+// Resets a participant's account by unlinking + deleting their auth user —
+// they run through /login/setup again and pick a fresh password themselves.
+// Their registration row, team membership, and everything the team has done
+// is untouched; only the login credential resets.
+export async function adminResetParticipantAccountAction(_prev: ResetPasswordResult, formData: FormData): Promise<ResetPasswordResult> {
   const user = await requireAdminAction()
   if (!user) return { ok: false, error: "Admins only." }
-  const teamId = String(formData.get("teamId") ?? "")
-  if (!teamId) return { ok: false, error: "Missing team." }
+  const registrationId = String(formData.get("registrationId") ?? "")
+  if (!registrationId) return { ok: false, error: "Missing registration." }
 
   const admin = createAdminClient()
-  const { data: team } = await admin.from("teams").select("auth_user_id, team_code, leader_email").eq("id", teamId).maybeSingle()
-  if (!team?.auth_user_id) return { ok: false, error: "Team has no linked login." }
+  const { data: reg } = await admin.from("registrations").select("auth_user_id, reg_no").eq("id", registrationId).maybeSingle()
+  if (!reg?.auth_user_id) return { ok: false, error: "This person hasn't signed up yet." }
 
-  // No password to generate or relay — just send them back through the
-  // self-serve "set your password" flow. Their team data (members,
-  // submissions, scores) is completely untouched; only the login credential
-  // resets, and only they ever know what the new one is.
-  const { error } = await admin.from("teams").update({ password_set: false }).eq("id", teamId)
-  if (error) return { ok: false, error: error.message }
-  await audit(admin, user, "team.reset_password", team.team_code)
+  await admin.from("registrations").update({ auth_user_id: null }).eq("id", registrationId)
+  await admin.auth.admin.deleteUser(reg.auth_user_id).catch(() => {})
+  await audit(admin, user, "registration.reset_account", reg.reg_no)
   revalidatePath("/admin/teams")
-  return {
-    ok: true,
-    message: `Reset — tell ${team.leader_email} to go to /login/setup and create a new password. Their team data is untouched.`,
-  }
+  return { ok: true, message: `Reset — tell ${reg.reg_no} to go to /login/setup and sign up again. Their team is untouched.` }
 }
 
 export async function deleteTeamAction(formData: FormData): Promise<void> {
@@ -394,7 +462,7 @@ export async function deleteTeamAction(formData: FormData): Promise<void> {
   const teamId = String(formData.get("teamId") ?? "")
   if (!teamId) return
   const admin = createAdminClient()
-  const { data: team } = await admin.from("teams").select("auth_user_id, team_code, problem_statement_id").eq("id", teamId).maybeSingle()
+  const { data: team } = await admin.from("teams").select("team_code, problem_statement_id").eq("id", teamId).maybeSingle()
   const { data: subs } = await admin.from("submissions").select("storage_path").eq("team_id", teamId)
   for (const s of subs ?? []) {
     if (s.storage_path) await admin.storage.from("submissions").remove([s.storage_path]).catch(() => {})
@@ -405,7 +473,6 @@ export async function deleteTeamAction(formData: FormData): Promise<void> {
       await admin.rpc("decrement_ps_taken", { ps_id: team.problem_statement_id })
     } catch {}
   }
-  if (team?.auth_user_id) await admin.auth.admin.deleteUser(team.auth_user_id).catch(() => {})
   await audit(admin, user, "team.delete", team?.team_code ?? teamId)
   revalidatePath("/admin/teams")
 }
@@ -495,6 +562,35 @@ async function roundIsPublished(admin: ReturnType<typeof createAdminClient>, rou
   return !!data?.is_published
 }
 
+async function buildScoresSheetRows(admin: ReturnType<typeof createAdminClient>, round: string): Promise<SheetsScoreRow[]> {
+  const [{ data: teams }, { data: scores }, published] = await Promise.all([
+    admin.from("teams").select("id, team_code, team_name"),
+    admin.from("scores").select("team_id, total_score, notes").eq("round", round),
+    roundIsPublished(admin, round),
+  ])
+  const scoreByTeam = new Map((scores ?? []).map((s) => [s.team_id, s]))
+  const now = new Date().toISOString()
+  return (teams ?? []).map((t) => {
+    const s = scoreByTeam.get(t.id)
+    return {
+      team_code: t.team_code,
+      team_name: t.team_name,
+      round,
+      total_score: s?.total_score ?? 0,
+      notes: s?.notes ?? "",
+      published,
+      updated_at: now,
+    }
+  })
+}
+
+function queueScoresSheetsPush(admin: ReturnType<typeof createAdminClient>, round: string) {
+  after(async () => {
+    const rows = await buildScoresSheetRows(admin, round)
+    await pushScoresToSheets("scores.write", rows)
+  })
+}
+
 export async function saveScoresAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireAdminAction()
   if (!user) return { ok: false, error: "Admins only." }
@@ -577,6 +673,7 @@ export async function saveScoresAction(_prev: ActionResult, formData: FormData):
   }
 
   await audit(admin, user, "scores.save", round, { count: saved })
+  queueScoresSheetsPush(admin, round)
   revalidatePath("/admin/scoring")
   return { ok: true, message: `Saved ${saved} score${saved === 1 ? "" : "s"} for ${round}.` }
 }
@@ -638,6 +735,7 @@ export async function importScoresAction(_prev: ImportScoresResult, formData: Fo
   if (error) return { ok: false, error: error.message }
 
   await audit(admin, user, "scores.import", round, { imported: rows.length, rejected: errors.length })
+  queueScoresSheetsPush(admin, round)
   revalidatePath("/admin/scoring")
   return {
     ok: true,
@@ -661,6 +759,7 @@ export async function setLeaderboardPublishedAction(formData: FormData): Promise
     published_at: published ? new Date().toISOString() : null,
   }, { onConflict: "round" })
   await audit(admin, user, published ? "leaderboard.publish" : "leaderboard.unpublish", round)
+  queueScoresSheetsPush(admin, round)
   revalidatePath("/admin/scoring")
   revalidatePath("/leaderboard")
 }

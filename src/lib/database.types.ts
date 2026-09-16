@@ -37,10 +37,10 @@ export type Database = {
         Relationships: []
       }
       attendance: {
-        Row: { day: number; is_present: boolean; marked_at: string; member_key: string; member_name: string; reg_no: string; team_id: string }
-        Insert: { day: number; is_present?: boolean; marked_at?: string; member_key: string; member_name?: string; reg_no?: string; team_id: string }
-        Update: { day?: number; is_present?: boolean; marked_at?: string; member_key?: string; member_name?: string; reg_no?: string; team_id?: string }
-        Relationships: [{ foreignKeyName: "attendance_team_id_fkey"; columns: ["team_id"]; isOneToOne: false; referencedRelation: "teams"; referencedColumns: ["id"] }]
+        Row: { day: number; is_present: boolean; marked_at: string; registration_id: string }
+        Insert: { day: number; is_present?: boolean; marked_at?: string; registration_id: string }
+        Update: { day?: number; is_present?: boolean; marked_at?: string; registration_id?: string }
+        Relationships: [{ foreignKeyName: "attendance_registration_id_fkey"; columns: ["registration_id"]; isOneToOne: false; referencedRelation: "registrations"; referencedColumns: ["id"] }]
       }
       game_slots: {
         Row: { booked_at: string | null; created_at: string; game: string; id: string; slot_index: number; start_time: string; taken_by_team_id: string | null }
@@ -61,10 +61,19 @@ export type Database = {
         Relationships: []
       }
       registrations: {
-        Row: { id: string; reg_no: string; phone: string; email: string; created_at: string; updated_at: string }
-        Insert: { id?: string; reg_no: string; phone: string; email: string; created_at?: string; updated_at?: string }
-        Update: { id?: string; reg_no?: string; phone?: string; email?: string; created_at?: string; updated_at?: string }
+        Row: { id: string; reg_no: string; phone: string; email: string; name: string; auth_user_id: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; reg_no: string; phone: string; email: string; name?: string; auth_user_id?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; reg_no?: string; phone?: string; email?: string; name?: string; auth_user_id?: string | null; created_at?: string; updated_at?: string }
         Relationships: []
+      }
+      team_members: {
+        Row: { id: string; team_id: string; registration_id: string; role: string; joined_at: string }
+        Insert: { id?: string; team_id: string; registration_id: string; role: string; joined_at?: string }
+        Update: { id?: string; team_id?: string; registration_id?: string; role?: string; joined_at?: string }
+        Relationships: [
+          { foreignKeyName: "team_members_team_id_fkey"; columns: ["team_id"]; isOneToOne: false; referencedRelation: "teams"; referencedColumns: ["id"] },
+          { foreignKeyName: "team_members_registration_id_fkey"; columns: ["registration_id"]; isOneToOne: true; referencedRelation: "registrations"; referencedColumns: ["id"] }
+        ]
       }
       people: {
         Row: { created_at: string; id: string; is_published: boolean; kind: string; name: string; photo_path: string | null; role: string; sort_order: number; tagline: string; tags: Json; updated_at: string }
@@ -91,15 +100,15 @@ export type Database = {
         Relationships: [{ foreignKeyName: "scores_team_id_fkey"; columns: ["team_id"]; isOneToOne: false; referencedRelation: "teams"; referencedColumns: ["id"] }]
       }
       submissions: {
-        Row: { file_name: string | null; file_size: number | null; id: string; round: string; storage_path: string | null; submitted_at: string; team_id: string; type: string; url: string | null }
-        Insert: { file_name?: string | null; file_size?: number | null; id?: string; round: string; storage_path?: string | null; submitted_at?: string; team_id: string; type: string; url?: string | null }
-        Update: { file_name?: string | null; file_size?: number | null; id?: string; round?: string; storage_path?: string | null; submitted_at?: string; team_id?: string; type?: string; url?: string | null }
+        Row: { drive_file_id: string | null; drive_view_link: string | null; file_name: string | null; file_size: number | null; id: string; project_title: string | null; project_description: string | null; round: string; storage_path: string | null; submitted_at: string; team_id: string; type: string; url: string | null }
+        Insert: { drive_file_id?: string | null; drive_view_link?: string | null; file_name?: string | null; file_size?: number | null; id?: string; project_title?: string | null; project_description?: string | null; round: string; storage_path?: string | null; submitted_at?: string; team_id: string; type: string; url?: string | null }
+        Update: { drive_file_id?: string | null; drive_view_link?: string | null; file_name?: string | null; file_size?: number | null; id?: string; project_title?: string | null; project_description?: string | null; round?: string; storage_path?: string | null; submitted_at?: string; team_id?: string; type?: string; url?: string | null }
         Relationships: [{ foreignKeyName: "submissions_team_id_fkey"; columns: ["team_id"]; isOneToOne: false; referencedRelation: "teams"; referencedColumns: ["id"] }]
       }
       teams: {
-        Row: { auth_user_id: string | null; created_at: string; id: string; leader_email: string; members: Json; password_set: boolean; problem_statement_id: number | null; ps_locked_at: string | null; status: string; team_code: string; team_name: string; updated_at: string }
-        Insert: { auth_user_id?: string | null; created_at?: string; id?: string; leader_email: string; members?: Json; password_set?: boolean; problem_statement_id?: number | null; ps_locked_at?: string | null; status?: string; team_code: string; team_name: string; updated_at?: string }
-        Update: { auth_user_id?: string | null; created_at?: string; id?: string; leader_email?: string; members?: Json; password_set?: boolean; problem_statement_id?: number | null; ps_locked_at?: string | null; status?: string; team_code?: string; team_name?: string; updated_at?: string }
+        Row: { auth_user_id: string | null; created_at: string; drive_folder_id: string | null; id: string; leader_email: string | null; members: Json; password_set: boolean; problem_statement_id: number | null; ps_locked_at: string | null; status: string; team_code: string; team_name: string; updated_at: string }
+        Insert: { auth_user_id?: string | null; created_at?: string; drive_folder_id?: string | null; id?: string; leader_email?: string | null; members?: Json; password_set?: boolean; problem_statement_id?: number | null; ps_locked_at?: string | null; status?: string; team_code: string; team_name: string; updated_at?: string }
+        Update: { auth_user_id?: string | null; created_at?: string; drive_folder_id?: string | null; id?: string; leader_email?: string | null; members?: Json; password_set?: boolean; problem_statement_id?: number | null; ps_locked_at?: string | null; status?: string; team_code?: string; team_name?: string; updated_at?: string }
         Relationships: [{ foreignKeyName: "teams_ps_fk"; columns: ["problem_statement_id"]; isOneToOne: false; referencedRelation: "problem_statements"; referencedColumns: ["id"] }]
       }
     }
@@ -120,6 +129,10 @@ export type Database = {
         Row: { body: Json | null; id: string | null; published_at: string | null; title: string | null }
         Relationships: []
       }
+      project_pages_public: {
+        Row: { team_code: string | null; team_name: string | null; project_title: string | null; project_description: string | null; repo_url: string | null; submitted_at: string | null }
+        Relationships: []
+      }
     }
     Functions: {
       roll_problem_statement: {
@@ -138,6 +151,35 @@ export type Database = {
         Args: { p_team_id: string }
         Returns: { id: number; code: string; title: string; description: string }[]
       }
+      create_team_with_members: {
+        Args: { p_team_name: string; p_teammate_registration_ids: string[] }
+        Returns: Database["public"]["Tables"]["teams"]["Row"]
+      }
+      search_teammates: {
+        Args: { p_query: string }
+        Returns: { id: string; reg_no: string; name: string }[]
+      }
+      get_my_team: {
+        Args: never
+        Returns: {
+          team_id: string; team_code: string; team_name: string; status: string; problem_statement_id: number | null
+          ps_locked_at: string | null
+          member_registration_id: string; member_reg_no: string; member_name: string
+          member_email: string; member_phone: string; member_role: string
+        }[]
+      }
+      admin_move_team_member: {
+        Args: { p_registration_id: string; p_new_team_id: string | null }
+        Returns: never
+      }
+      admin_set_team_leader: {
+        Args: { p_team_id: string; p_registration_id: string }
+        Returns: never
+      }
+      admin_create_team_with_members: {
+        Args: { p_team_name: string; p_registration_ids: string[] }
+        Returns: Database["public"]["Tables"]["teams"]["Row"]
+      }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
@@ -145,6 +187,45 @@ export type Database = {
 }
 
 export type Team = Database["public"]["Tables"]["teams"]["Row"]
+export type Registration = Database["public"]["Tables"]["registrations"]["Row"]
+export type TeamMemberRow = Database["public"]["Tables"]["team_members"]["Row"]
+export type MyTeamRow = Database["public"]["Functions"]["get_my_team"]["Returns"][number]
+
+export interface MyTeam {
+  id: string
+  team_code: string
+  team_name: string
+  status: string
+  problem_statement_id: number | null
+  ps_locked_at: string | null
+  members: { registrationId: string; regNo: string; name: string; email: string; phone: string; role: "leader" | "member" }[]
+}
+
+export function isTeamLeader(team: MyTeam | null, registrationId: string | undefined | null): boolean {
+  if (!team || !registrationId) return false
+  return team.members.some((m) => m.registrationId === registrationId && m.role === "leader")
+}
+
+export function myTeamFromRows(rows: MyTeamRow[]): MyTeam | null {
+  if (!rows.length) return null
+  const first = rows[0]
+  return {
+    id: first.team_id,
+    team_code: first.team_code,
+    team_name: first.team_name,
+    status: first.status,
+    problem_statement_id: first.problem_statement_id,
+    ps_locked_at: first.ps_locked_at,
+    members: rows.map((r) => ({
+      registrationId: r.member_registration_id,
+      regNo: r.member_reg_no,
+      name: r.member_name,
+      email: r.member_email,
+      phone: r.member_phone,
+      role: r.member_role as "leader" | "member",
+    })),
+  }
+}
 export type ProblemStatement = Database["public"]["Tables"]["problem_statements"]["Row"]
 export type Submission = Database["public"]["Tables"]["submissions"]["Row"]
 export type Score = Database["public"]["Tables"]["scores"]["Row"]

@@ -1,9 +1,10 @@
 import type { Metadata } from "next"
-import { requireTeamPage } from "@/lib/auth"
+import { requireParticipantPage } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { logoutAction } from "@/lib/actions/auth"
 import { Badge, StatusBadge } from "@/components/ui"
 import { DashboardNav } from "./nav"
+import { TeamSetup } from "./team-setup"
 
 export const dynamic = "force-dynamic"
 
@@ -12,7 +13,11 @@ export const metadata: Metadata = {
 }
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { team } = await requireTeamPage()
+  const { registration, team } = await requireParticipantPage()
+
+  if (!team) {
+    return <TeamSetup registrationName={registration.name} />
+  }
 
   const admin = createAdminClient()
   const { data: notices } = await admin

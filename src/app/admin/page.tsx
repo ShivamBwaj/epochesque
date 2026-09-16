@@ -6,15 +6,12 @@ import { getEventTiming, getEventFlags, deadlinePassed } from "@/lib/settings"
 import { setFinalOpenAction } from "@/lib/actions/admin"
 import { SubmitButton } from "@/components/submit-button"
 import { Badge, Card, EmptyState, LinkButton, SectionHeading, StatCard } from "@/components/ui"
+import { formatIST as fmt } from "@/lib/format-date"
 
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Overview",
-}
-
-function fmt(iso: string | null) {
-  return iso ? new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"
 }
 
 export default async function AdminOverviewPage() {

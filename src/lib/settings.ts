@@ -24,17 +24,31 @@ export interface EventFlags {
   rollOpen: boolean
   finalOpen: boolean
   gamingOpen: boolean
+  certificatesPublished: boolean
+  projectsPublished: boolean
 }
 
 export const getEventFlags = cache(async (): Promise<EventFlags> => {
   const supabase = await createClient()
-  const { data } = await supabase.from("event_settings").select("key, value").in("key", ["roll_open", "final_open", "gaming_open"])
+  const { data } = await supabase
+    .from("event_settings")
+    .select("key, value")
+    .in("key", ["roll_open", "final_open", "gaming_open", "certificates_published", "projects_published"])
   const map = new Map((data ?? []).map((r) => [r.key, r.value]))
   return {
     rollOpen: map.get("roll_open") === true,
     finalOpen: map.get("final_open") === true,
     gamingOpen: map.get("gaming_open") === true,
+    certificatesPublished: map.get("certificates_published") === true,
+    projectsPublished: map.get("projects_published") === true,
   }
+})
+
+export const getPptTemplatePath = cache(async (): Promise<string | null> => {
+  const supabase = await createClient()
+  const { data } = await supabase.from("event_settings").select("value").eq("key", "ppt_template_path").maybeSingle()
+  const v = data?.value
+  return typeof v === "string" && v ? v : null
 })
 
 export function deadlinePassed(deadline: string | null, now = new Date()): boolean {

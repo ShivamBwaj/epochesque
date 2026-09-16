@@ -85,7 +85,9 @@ export function ScoringGrid({
       <Card className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <p className="hud-label">LEADERBOARD · {round === "final" ? "FINAL" : "ROUND 1"}</p>
+            <p className="hud-label">
+              LEADERBOARD · {round === "final" ? "FINAL" : round === "round2" ? "ROUND 1 — QUIZ" : "ROUND 2 — OC ROUND"}
+            </p>
             {isPublished ? <Badge tone="green">published</Badge> : <Badge tone="slate">unpublished</Badge>}
           </div>
           {isPublished ? (
@@ -259,7 +261,7 @@ export function ScoringGrid({
           </Card>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <SubmitButton pendingText="Saving…">
-              Save {round === "final" ? "senior final" : round === "round2" ? "quiz" : "OC Round 1"} scores
+              Save {round === "final" ? "senior final" : round === "round2" ? "quiz" : "OC Round"} scores
             </SubmitButton>
             <span className="text-xs text-muted">
               {scored}/{teams.length} scored

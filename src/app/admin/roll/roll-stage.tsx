@@ -114,8 +114,8 @@ export function RollStage({ teams, pool }: { teams: StageTeam[]; pool: PoolItem[
               }`}
             >
               <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-medium text-foreground/90">{t.name}</span>
                 <span className="block truncate font-mono text-xs text-accent-hover">{t.code}</span>
-                <span className="block truncate text-[13px] text-foreground/90">{t.name}</span>
               </span>
               {t.psCode ? <Badge tone="green">{t.psCode}</Badge> : <Badge tone="slate">—</Badge>}
             </button>
@@ -158,9 +158,9 @@ export function RollStage({ teams, pool }: { teams: StageTeam[]; pool: PoolItem[
           <main className="relative z-10 flex min-h-0 flex-1 flex-col justify-center px-6 pb-6">
             <div className="mb-8 text-center">
               <h1 className="truncate text-3xl font-bold tracking-tight text-foreground md:text-5xl">
-                {selected.code}
+                {selected.name}
               </h1>
-              <p className="mt-1 truncate text-lg text-muted-foreground md:text-2xl">{selected.name}</p>
+              <p className="mt-1 truncate font-mono text-sm text-muted-foreground md:text-base">{selected.code}</p>
             </div>
             <div className="mx-auto w-full max-w-5xl">
               <CaseOpener key={selected.id} pool={pool} onLanded={handleLanded} rollFn={() => adminRollForTeamAction(selected.id)} />

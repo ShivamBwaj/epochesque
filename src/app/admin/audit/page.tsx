@@ -2,15 +2,12 @@ import type { Metadata } from "next"
 import { requireAdminPage } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { Badge, Card, EmptyState, SectionHeading } from "@/components/ui"
+import { formatIST as fmt } from "@/lib/format-date"
 
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Audit Log",
-}
-
-function fmt(iso: string) {
-  return new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
 }
 
 function toneFor(action: string): "green" | "amber" | "red" | "cyan" | "slate" {

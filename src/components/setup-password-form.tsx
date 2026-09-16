@@ -2,30 +2,30 @@
 
 import Link from "next/link"
 import { useActionState, useState } from "react"
-import { checkLeaderEmailAction, setInitialPasswordAction, type SetPasswordState } from "@/lib/actions/auth"
+import { checkRegistrationAction, signupAction, type SignupState } from "@/lib/actions/auth"
 import { Input, Label, Alert } from "@/components/ui"
 import { SubmitButton } from "@/components/submit-button"
 
-type Stage = "email" | "not_eligible" | "password"
+type Stage = "details" | "not_eligible" | "password"
 
 export function SetupPasswordForm() {
-  const [stage, setStage] = useState<Stage>("email")
+  const [stage, setStage] = useState<Stage>("details")
+  const [regNo, setRegNo] = useState("")
   const [email, setEmail] = useState("")
-  const [confirmedEmail, setConfirmedEmail] = useState("")
+  const [confirmed, setConfirmed] = useState<{ regNo: string; email: string; name?: string } | null>(null)
   const [checking, setChecking] = useState(false)
-  const [checkError, setCheckError] = useState<string | null>(null)
-  const [setupState, setupFormAction] = useActionState<SetPasswordState, FormData>(setInitialPasswordAction, {})
+  const [signupState, signupFormAction] = useActionState<SignupState, FormData>(signupAction, {})
 
   async function onContinue(e: React.FormEvent) {
     e.preventDefault()
-    const clean = email.trim().toLowerCase()
-    if (!clean) return
+    const cleanRegNo = regNo.trim().toUpperCase()
+    const cleanEmail = email.trim().toLowerCase()
+    if (!cleanRegNo || !cleanEmail) return
     setChecking(true)
-    setCheckError(null)
     try {
-      const res = await checkLeaderEmailAction(clean)
-      if (res.needsSetup) {
-        setConfirmedEmail(clean)
+      const res = await checkRegistrationAction(cleanRegNo, cleanEmail)
+      if (res.eligible) {
+        setConfirmed({ regNo: cleanRegNo, email: cleanEmail, name: res.name })
         setStage("password")
       } else {
         setStage("not_eligible")
@@ -39,8 +39,9 @@ export function SetupPasswordForm() {
     return (
       <div className="space-y-4">
         <Alert tone="error">
-          That email either already has a password set, or isn&apos;t registered as a team leader. If you&apos;ve
-          already set a password, use the normal login. If you think this is a mistake, contact the organizers.
+          We couldn&apos;t match that registration number and email, or this registration already has an account. If
+          you&apos;ve already signed up, use the normal login. If you registered recently, it can take a few minutes
+          to show up — or contact the organizers.
         </Alert>
         <div className="flex flex-col gap-2 text-center text-sm">
           <Link href="/login" className="text-accent-hover underline-offset-4 hover:underline">
@@ -48,24 +49,32 @@ export function SetupPasswordForm() {
           </Link>
           <button
             type="button"
-            onClick={() => setStage("email")}
+            onClick={() => setStage("details")}
             className="text-xs text-muted-foreground hover:text-foreground"
           >
-            Try a different email
+            Try again
           </button>
         </div>
       </div>
     )
   }
 
-  if (stage === "password") {
+  if (stage === "password" && confirmed) {
     return (
-      <form action={setupFormAction} className="space-y-4">
-        {setupState.error ? <Alert tone="error">{setupState.error}</Alert> : null}
-        <input type="hidden" name="email" value={confirmedEmail} />
+      <form action={signupFormAction} className="space-y-4">
+        {signupState.error ? <Alert tone="error">{signupState.error}</Alert> : null}
+        <input type="hidden" name="regNo" value={confirmed.regNo} />
+        <input type="hidden" name="email" value={confirmed.email} />
+        {confirmed.name ? (
+          <Alert tone="success">Welcome, {confirmed.name} — create a password to finish setting up your account.</Alert>
+        ) : null}
         <div>
-          <Label>Leader email</Label>
-          <Input value={confirmedEmail} disabled className="opacity-70" />
+          <Label>Registration number</Label>
+          <Input value={confirmed.regNo} disabled className="opacity-70" />
+        </div>
+        <div>
+          <Label>Email</Label>
+          <Input value={confirmed.email} disabled className="opacity-70" />
         </div>
         <div>
           <Label htmlFor="password">Create a password</Label>
@@ -75,18 +84,15 @@ export function SetupPasswordForm() {
           <Label htmlFor="confirmPassword">Confirm password</Label>
           <Input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" placeholder="••••••••" required minLength={8} />
         </div>
-        <SubmitButton className="w-full" size="lg" pendingText="Setting password…">
-          Set password &amp; sign in
+        <SubmitButton className="w-full" size="lg" pendingText="Creating account…">
+          Create account &amp; sign in
         </SubmitButton>
         <button
           type="button"
-          onClick={() => {
-            setStage("email")
-            setConfirmedEmail("")
-          }}
+          onClick={() => setStage("details")}
           className="w-full text-center text-xs text-muted-foreground hover:text-foreground"
         >
-          Not you? Use a different email
+          Not you? Start over
         </button>
       </form>
     )
@@ -94,20 +100,31 @@ export function SetupPasswordForm() {
 
   return (
     <form onSubmit={onContinue} className="space-y-4">
-      {checkError ? <Alert tone="error">{checkError}</Alert> : null}
       <div>
-        <Label htmlFor="email">Leader email</Label>
+        <Label htmlFor="regNo">Registration number</Label>
         <Input
-          id="email"
+          id="regNo"
+          type="text"
+          autoComplete="off"
+          placeholder="25BCE1234"
+          required
+          value={regNo}
+          onChange={(e) => setRegNo(e.target.value)}
+        />
+      </div>
+      <div>
+        <Label htmlFor="signupEmail">Email</Label>
+        <Input
+          id="signupEmail"
           type="email"
           autoComplete="email"
-          placeholder="leader@team.edu"
+          placeholder="you@vitstudent.ac.in"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         <p className="mt-1.5 text-[11px] text-muted/70">
-          Use the email the organizers registered your team with.
+          Must match what you used when you registered.
         </p>
       </div>
       <button
@@ -118,7 +135,7 @@ export function SetupPasswordForm() {
         {checking ? "Checking…" : "Continue"}
       </button>
       <Link href="/login" className="block text-center text-xs text-muted-foreground hover:text-foreground">
-        ← Already set your password? Sign in
+        ← Already have an account? Sign in
       </Link>
     </form>
   )

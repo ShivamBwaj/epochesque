@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import { LoginForm } from "@/components/login-form"
 
 export const metadata: Metadata = {
-  title: "Team Login",
-  description: "Sign in to your Epochesque team dashboard with your leader credentials.",
+  title: "Login",
+  description: "Sign in to your Epochesque dashboard.",
 }
 
 export default async function LoginPage({
@@ -13,7 +13,7 @@ export default async function LoginPage({
 }) {
   const sp = await searchParams
   const initialError =
-    sp.error === "not_linked" ? "Your account is not linked to a team. Contact the organizers." : undefined
+    sp.error === "not_linked" ? "Your account isn't linked to a registration. Contact the organizers." : undefined
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 pt-28 pb-16">

@@ -15,22 +15,21 @@ const groups: { label: string; links: NavLink[] }[] = [
     links: [
       { href: "/admin", label: "Overview", exact: true },
       { href: "/admin/roll", label: "Roll Stage" },
-      { href: "/admin/attendance", label: "Attendance" },
       { href: "/admin/gaming", label: "Gaming" },
     ],
   },
   {
     label: "Teams & Problems",
     links: [
-      { href: "/admin/teams", label: "Teams" },
-      { href: "/admin/teams/import", label: "Import" },
+      { href: "/admin/teams", label: "Teams + Attendance" },
+      { href: "/admin/teams/add", label: "Walk-in Team" },
       { href: "/admin/problem-statements", label: "Problems" },
     ],
   },
   {
     label: "Judging",
     links: [
-      { href: "/admin/round1", label: "OC Round 1 Decks" },
+      { href: "/admin/round1", label: "OC Round Decks" },
       { href: "/admin/final", label: "Final Repos" },
       { href: "/admin/scoring", label: "Scoring" },
       { href: "/leaderboard", label: "Leaderboard" },

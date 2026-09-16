@@ -3,15 +3,12 @@ import { requireTeamPage } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { Alert, Badge, Card, Prose, SectionHeading } from "@/components/ui"
 import { AutoRefresh } from "@/components/auto-refresh"
+import { formatIST as fmt } from "@/lib/format-date"
 
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Problem Statement",
-}
-
-function fmt(iso: string | null) {
-  return iso ? new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"
 }
 
 export default async function ProblemStatementPage() {
@@ -38,15 +35,23 @@ export default async function ProblemStatementPage() {
               <Badge tone="cyan">{ps.code}</Badge>
               <Badge tone="green">LOCKED</Badge>
             </div>
-            <h3 className="mt-4 text-xl font-semibold tracking-tight text-foreground md:text-2xl">{ps.title}</h3>
-            <div className="mt-4">
+            <h3 className="mt-4 text-3xl font-bold tracking-tight text-foreground md:text-5xl">{ps.title}</h3>
+            <div className="mt-6">
               <Prose>
-                <p className="whitespace-pre-line">{ps.description}</p>
+                <p className="whitespace-pre-line text-lg md:text-xl">{ps.description}</p>
               </Prose>
             </div>
             <p className="mt-6 font-mono text-xs tracking-widest text-muted/60">
               LOCKED IN AT {fmt(team.ps_locked_at).toUpperCase()}
             </p>
+            <a
+              href="/epochesque-tracks.pdf"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft px-4 py-2 text-xs text-accent-hover transition hover:bg-accent-soft/80"
+            >
+              📄 View track rubric & ideas (PDF)
+            </a>
           </Card>
         ) : (
           <Alert tone="info">

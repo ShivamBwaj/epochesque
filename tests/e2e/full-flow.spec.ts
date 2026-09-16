@@ -100,7 +100,7 @@ test("admin journey: score, publish leaderboard, winners", async ({ page }) => {
   await expect(page.locator("body")).toContainText("Saved", { timeout: 20_000 })
 
   await page.goto("/leaderboard")
-  await expect(page.locator("body")).toContainText("Revealed after judging")
+  await expect(page.locator("body")).toContainText("Nothing published yet")
 
   await page.goto("/admin/scoring?round=round1")
   await page.click('button:has-text("Publish")')
@@ -128,7 +128,7 @@ test("admin journey: score, publish leaderboard, winners", async ({ page }) => {
   await page.click('button:has-text("Unpublish")')
   await expect(page.locator('text="unpublished"').first()).toBeVisible({ timeout: 30_000 })
   await page.goto("/leaderboard")
-  await expect(page.locator("body")).toContainText("Revealed after judging")
+  await expect(page.locator("body")).toContainText("Nothing published yet")
 })
 
 test("bad credentials are rejected", async ({ page }) => {

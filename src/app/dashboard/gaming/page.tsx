@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 }
 
 export default async function DashboardGamingPage() {
-  const { team } = await requireTeamPage()
+  const { team, isLeader } = await requireTeamPage()
   const admin = createAdminClient()
   const [{ data: slots }, flags] = await Promise.all([
     admin.from("game_slots").select("*").order("slot_index"),
@@ -28,7 +28,7 @@ export default async function DashboardGamingPage() {
       <SectionHeading
         kicker="SIDE QUEST"
         title="Gaming Slots"
-        description="Tekken or FIFA — 15 minutes of glory between builds. 11:00 to 14:00, one slot per team, one game per team. First come, first served."
+        description="Tekken or FIFA — 10 minutes of glory between builds. 2:00 PM to 5:30 PM, one slot per team, one game per team. First come, first served."
       />
 
       {slotCount === 0 ? (
@@ -45,6 +45,7 @@ export default async function DashboardGamingPage() {
               .map((s) => ({ id: s.id, startTime: s.start_time, taken: s.taken_by_team_id !== null })),
           }))}
           myBooking={myBooking ? { game: myBooking.game, startTime: myBooking.start_time, label: gameLabel(myBooking.game) } : null}
+          isLeader={isLeader}
         />
       )}
     </div>

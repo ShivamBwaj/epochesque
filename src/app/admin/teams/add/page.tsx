@@ -6,7 +6,7 @@ import { AddTeamForm } from "./add-team-form"
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
-  title: "Add Team",
+  title: "Walk-in Team",
 }
 
 export default async function AdminAddTeamPage() {
@@ -16,8 +16,8 @@ export default async function AdminAddTeamPage() {
     <div className="space-y-8">
       <SectionHeading
         kicker="ON-SPOT REGISTRATION"
-        title="Add a team manually"
-        description="For walk-in registrations. The leader's email becomes the login — they set their own password at /login on first sign-in."
+        title="Add a walk-in team"
+        description="For people who show up on the day with no prior registration. Registers each of them (or reuses their row if they already registered) and forms a 2-4 person team from them in one step."
       />
       <AddTeamForm />
     </div>

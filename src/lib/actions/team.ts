@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getViewer } from "@/lib/auth"
+import { isTeamLeader } from "@/lib/database.types"
 import { getEventTiming, getEventFlags, deadlinePassed } from "@/lib/settings"
 import { deckFileError, deckMagicError, sanitizeFileName } from "@/lib/validate"
 
@@ -38,6 +39,9 @@ export interface BookSlotResult {
 export async function bookGameSlotAction(slotId: string): Promise<BookSlotResult> {
   const viewer = await getViewer()
   if (!viewer || viewer.role !== "team" || !viewer.team) return { ok: false, error: "Not signed in as a team." }
+  if (!isTeamLeader(viewer.team, viewer.registration?.id)) {
+    return { ok: false, error: "Only your team leader can book a gaming slot." }
+  }
 
   const flags = await getEventFlags()
   if (!flags.gamingOpen) return { ok: false, error: "Gaming slots aren't open yet — wait for the organizers to open booking." }
@@ -51,7 +55,11 @@ export async function bookGameSlotAction(slotId: string): Promise<BookSlotResult
         ? "Another team just grabbed that slot. Pick another one."
         : error.message.includes("SLOT_NOT_FOUND")
           ? "That slot no longer exists. Refresh the page."
-          : "Could not book the slot. Try again."
+          : error.message.includes("SLOT_LEADER_ONLY")
+            ? "Only your team leader can book a gaming slot."
+            : error.message.includes("SLOT_NO_TEAM")
+              ? "Your account isn't linked to a team yet. Contact the organizers."
+              : "Could not book the slot. Try again."
     return { ok: false, error: msg }
   }
   revalidatePath("/dashboard/gaming")
@@ -70,11 +78,14 @@ export interface UploadBeginResult {
 export async function beginRound1UploadAction(fileName: string, fileSize: number): Promise<UploadBeginResult> {
   const viewer = await getViewer()
   if (!viewer || viewer.role !== "team" || !viewer.team) return { ok: false, error: "Not signed in as a team." }
+  if (!isTeamLeader(viewer.team, viewer.registration?.id)) {
+    return { ok: false, error: "Only your team leader can upload the deck." }
+  }
   const team = viewer.team
 
   const timing = await getEventTiming()
   if (deadlinePassed(timing.round1_deadline)) {
-    return { ok: false, error: "The OC Round 1 deadline has passed. Submissions are closed." }
+    return { ok: false, error: "The OC Round deadline has passed. Submissions are closed." }
   }
 
   const fileError = deckFileError(fileName, fileSize)
@@ -90,22 +101,27 @@ export async function beginRound1UploadAction(fileName: string, fileSize: number
 export async function submitRound1Action(_prev: SubmitState, formData: FormData): Promise<SubmitState> {
   const viewer = await getViewer()
   if (!viewer || viewer.role !== "team" || !viewer.team) return { error: "Not signed in as a team." }
+  if (!isTeamLeader(viewer.team, viewer.registration?.id)) {
+    return { error: "Only your team leader can upload the deck." }
+  }
   const team = viewer.team
 
   const timing = await getEventTiming()
   if (deadlinePassed(timing.round1_deadline)) {
-    return { error: "The OC Round 1 deadline has passed. Submissions are closed." }
+    return { error: "The OC Round deadline has passed. Submissions are closed." }
   }
 
-  const path = String(formData.get("path") ?? "")
   const fileName = String(formData.get("file_name") ?? "")
   const fileSize = Number(formData.get("file_size") ?? 0)
 
-  if (!path.startsWith(`round1/${team.id}/`)) return { error: "Invalid upload path. Try again." }
   const fileError = deckFileError(fileName, fileSize)
   if (fileError) return { error: fileError }
 
   const admin = createAdminClient()
+
+  const path = String(formData.get("path") ?? "")
+  if (!path.startsWith(`round1/${team.id}/`)) return { error: "Invalid upload path. Try again." }
+
   const { data: signed } = await admin.storage.from("submissions").createSignedUrl(path, 60)
   if (!signed?.signedUrl) return { error: "Could not verify the upload. Try again." }
   const headRes = await fetch(signed.signedUrl, { headers: { Range: "bytes=0-15" } })
@@ -118,9 +134,9 @@ export async function submitRound1Action(_prev: SubmitState, formData: FormData)
   }
   const contentRange = headRes.headers.get("content-range")
   const realSize = contentRange ? Number(contentRange.split("/")[1]) : fileSize
-  if (Number.isFinite(realSize) && realSize > 25 * 1024 * 1024) {
+  if (Number.isFinite(realSize) && realSize > 10 * 1024 * 1024) {
     await admin.storage.from("submissions").remove([path]).catch(() => {})
-    return { error: "File is larger than 25 MB." }
+    return { error: "File is larger than 10 MB." }
   }
 
   const { data: existing } = await admin
@@ -136,6 +152,8 @@ export async function submitRound1Action(_prev: SubmitState, formData: FormData)
     type: "ppt",
     url: null,
     storage_path: path,
+    drive_file_id: null,
+    drive_view_link: null,
     file_name: fileName,
     file_size: fileSize,
   }, { onConflict: "team_id,round" })
@@ -153,6 +171,9 @@ export async function submitRound1Action(_prev: SubmitState, formData: FormData)
 export async function submitFinalAction(_prev: SubmitState, formData: FormData): Promise<SubmitState> {
   const viewer = await getViewer()
   if (!viewer || viewer.role !== "team" || !viewer.team) return { error: "Not signed in as a team." }
+  if (!isTeamLeader(viewer.team, viewer.registration?.id)) {
+    return { error: "Only your team leader can submit the final repo." }
+  }
   const team = viewer.team
 
   const [timing, flags] = await Promise.all([getEventTiming(), getEventFlags()])
@@ -166,6 +187,11 @@ export async function submitFinalAction(_prev: SubmitState, formData: FormData):
   const url = normalizeGithubUrl(String(formData.get("url") ?? ""))
   if (!url) return { error: "Enter a valid GitHub repository URL (https://github.com/user/repo)." }
 
+  const projectTitle = String(formData.get("project_title") ?? "").trim().slice(0, 120)
+  const projectDescription = String(formData.get("project_description") ?? "").trim().slice(0, 2000)
+  if (!projectTitle) return { error: "Enter a project title." }
+  if (!projectDescription) return { error: "Enter a project description." }
+
   const admin = createAdminClient()
   const { error } = await admin.from("submissions").upsert({
     team_id: team.id,
@@ -175,6 +201,8 @@ export async function submitFinalAction(_prev: SubmitState, formData: FormData):
     storage_path: null,
     file_name: null,
     file_size: null,
+    project_title: projectTitle,
+    project_description: projectDescription,
   }, { onConflict: "team_id,round" })
   if (error) return { error: "Could not save your submission. Try again." }
 

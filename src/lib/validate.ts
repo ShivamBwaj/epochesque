@@ -1,5 +1,5 @@
 const PPT_EXTS = [".ppt", ".pptx", ".pdf"]
-const MAX_PPT_BYTES = 25 * 1024 * 1024
+const MAX_PPT_BYTES = 10 * 1024 * 1024
 
 export function deckFileError(name: string, size: number): string | null {
   const lower = name.toLowerCase()
@@ -7,7 +7,7 @@ export function deckFileError(name: string, size: number): string | null {
     return "Only .ppt, .pptx or .pdf files are allowed."
   }
   if (size > MAX_PPT_BYTES) {
-    return "File is larger than 25 MB."
+    return "File is larger than 10 MB."
   }
   return null
 }

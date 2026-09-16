@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import { SetupPasswordForm } from "@/components/setup-password-form"
 
 export const metadata: Metadata = {
-  title: "Set Up Your Password",
-  description: "First time here? Set a password for your Epochesque team account.",
+  title: "Sign Up",
+  description: "Registered for Epochesque? Create your account.",
 }
 
 export default function SetupPasswordPage() {
@@ -15,9 +15,9 @@ export default function SetupPasswordPage() {
             <span className="ring-glow mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-accent/30 bg-accent-soft font-mono text-xl font-bold text-accent-hover">
               E
             </span>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">Set Up Your Password</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">Sign Up</h1>
             <p className="mt-1.5 text-xs text-muted-foreground">
-              First time here — confirm your leader email, then create a password for your team.
+              Confirm your registration number and email, then create a password.
             </p>
           </div>
           <SetupPasswordForm />

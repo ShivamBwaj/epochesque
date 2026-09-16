@@ -16,6 +16,7 @@ export const TEAM_CODE = `E2E-${RUN}`
 export interface SeedData {
   teamId: string
   teamUserId: string
+  registrationIds: string[]
   psIds: number[]
   reactivatedPsIds: number[]
   startedAt: string
@@ -47,28 +48,43 @@ export async function seed(): Promise<SeedData> {
   })
   if (authErr || !authUser?.user) throw new Error(`seed user failed: ${authErr?.message}`)
 
+  const { data: leaderReg, error: leaderRegErr } = await admin
+    .from("registrations")
+    .insert({ name: "E2E Leader", reg_no: `E2E-${RUN}-01`, phone: "0000000000", email: TEAM_EMAIL, auth_user_id: authUser.user.id })
+    .select("id")
+    .single()
+  if (leaderRegErr || !leaderReg) {
+    await admin.auth.admin.deleteUser(authUser.user.id).catch(() => {})
+    throw new Error(`seed leader registration failed: ${leaderRegErr?.message}`)
+  }
+  const { data: memberReg, error: memberRegErr } = await admin
+    .from("registrations")
+    .insert({ name: "E2E Member Two", reg_no: `E2E-${RUN}-02`, phone: "0000000000", email: "" })
+    .select("id")
+    .single()
+  if (memberRegErr || !memberReg) {
+    await admin.auth.admin.deleteUser(authUser.user.id).catch(() => {})
+    throw new Error(`seed member registration failed: ${memberRegErr?.message}`)
+  }
+  const registrationIds = [leaderReg.id, memberReg.id]
+
   const { data: team, error: teamErr } = await admin
     .from("teams")
-    .insert({
-      team_code: TEAM_CODE,
-      team_name: `E2E Test Team ${RUN}`,
-      members: [
-        { name: "E2E Leader", email: TEAM_EMAIL, college: "E2E College" },
-        { name: "E2E Member Two", email: null, college: "E2E College" },
-      ],
-      leader_email: TEAM_EMAIL,
-      auth_user_id: authUser.user.id,
-      status: "registered",
-      // Seeded with a known password directly (bypassing the self-serve
-      // setup flow) — mark it already set so login tests hit the normal
-      // password field instead of the "create your password" form.
-      password_set: true,
-    })
+    .insert({ team_code: TEAM_CODE, team_name: `E2E Test Team ${RUN}`, status: "registered" })
     .select("id")
     .single()
   if (teamErr || !team) {
     await admin.auth.admin.deleteUser(authUser.user.id).catch(() => {})
     throw new Error(`seed team failed: ${teamErr?.message}`)
+  }
+
+  const { error: tmErr } = await admin.from("team_members").insert([
+    { team_id: team.id, registration_id: leaderReg.id, role: "leader" },
+    { team_id: team.id, registration_id: memberReg.id, role: "member" },
+  ])
+  if (tmErr) {
+    await admin.auth.admin.deleteUser(authUser.user.id).catch(() => {})
+    throw new Error(`seed team_members failed: ${tmErr.message}`)
   }
 
   await admin.from("event_settings").upsert(
@@ -85,7 +101,14 @@ export async function seed(): Promise<SeedData> {
       { round: "final", is_published: false, published_at: null },
     ], { onConflict: "round" })
 
-  return { teamId: team.id, teamUserId: authUser.user.id, psIds: ps.map((p) => p.id), reactivatedPsIds: reactivated, startedAt: new Date().toISOString() }
+  return {
+    teamId: team.id,
+    teamUserId: authUser.user.id,
+    registrationIds,
+    psIds: ps.map((p) => p.id),
+    reactivatedPsIds: reactivated,
+    startedAt: new Date().toISOString(),
+  }
 }
 
 export async function cleanup(seedData: SeedData) {
@@ -99,6 +122,7 @@ export async function cleanup(seedData: SeedData) {
   await admin.from("submissions").delete().eq("team_id", seedData.teamId)
   await admin.from("scores").delete().eq("team_id", seedData.teamId)
   await admin.from("teams").delete().eq("id", seedData.teamId)
+  await admin.from("registrations").delete().in("id", seedData.registrationIds)
   await admin.auth.admin.deleteUser(seedData.teamUserId).catch(() => {})
   await admin.from("problem_statements").delete().in("id", seedData.psIds)
   if (seedData.reactivatedPsIds?.length > 0) {

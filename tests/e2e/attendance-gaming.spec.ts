@@ -21,6 +21,7 @@ const MEMBERS = [
 
 let teamUserId = ""
 let team2UserId = ""
+let registrationIds: string[] = []
 let startedAt = ""
 let gamingWasOpen = false
 
@@ -36,18 +37,36 @@ test.beforeAll(async () => {
   if (authErr || !authUser?.user) throw new Error(`seed user failed: ${authErr?.message}`)
   teamUserId = authUser.user.id
 
-  const { error: teamErr } = await admin.from("teams").insert({
-    team_code: TEAM_CODE,
-    team_name: `E2E Attendance Team ${RUN}`,
-    members: MEMBERS,
-    leader_email: TEAM_EMAIL,
-    auth_user_id: teamUserId,
-    status: "registered",
-    password_set: true,
-  })
-  if (teamErr) {
+  const { data: team, error: teamErr } = await admin
+    .from("teams")
+    .insert({ team_code: TEAM_CODE, team_name: `E2E Attendance Team ${RUN}`, status: "registered" })
+    .select("id")
+    .single()
+  if (teamErr || !team) {
     await admin.auth.admin.deleteUser(teamUserId).catch(() => {})
-    throw new Error(`seed team failed: ${teamErr.message}`)
+    throw new Error(`seed team failed: ${teamErr?.message}`)
+  }
+
+  const memberRows = MEMBERS.map((m) => ({
+    name: m.name,
+    reg_no: `${RUN}-${m.member_id}`,
+    phone: "0000000000",
+    email: m.email ?? "",
+    auth_user_id: m.email === TEAM_EMAIL ? teamUserId : null,
+  }))
+  const { data: regs, error: regsErr } = await admin.from("registrations").insert(memberRows).select("id, email")
+  if (regsErr || !regs) {
+    await admin.auth.admin.deleteUser(teamUserId).catch(() => {})
+    throw new Error(`seed member registrations failed: ${regsErr?.message}`)
+  }
+  registrationIds = regs.map((r) => r.id)
+
+  const { error: tmErr } = await admin.from("team_members").insert(
+    regs.map((r) => ({ team_id: team.id, registration_id: r.id, role: r.email === TEAM_EMAIL ? "leader" : "member" }))
+  )
+  if (tmErr) {
+    await admin.auth.admin.deleteUser(teamUserId).catch(() => {})
+    throw new Error(`seed team_members failed: ${tmErr.message}`)
   }
 
   const { data: authUser2, error: authErr2 } = await admin.auth.admin.createUser({
@@ -59,19 +78,29 @@ test.beforeAll(async () => {
   if (authErr2 || !authUser2?.user) throw new Error(`seed user2 failed: ${authErr2?.message}`)
   team2UserId = authUser2.user.id
 
-  const { error: teamErr2 } = await admin.from("teams").insert({
-    team_code: TEAM2_CODE,
-    team_name: `E2E Scoring Team ${RUN}`,
-    members: [{ name: "Scoring Leader", email: TEAM2_EMAIL }],
-    leader_email: TEAM2_EMAIL,
-    auth_user_id: team2UserId,
-    status: "registered",
-    password_set: true,
-  })
-  if (teamErr2) {
+  const { data: team2, error: teamErr2 } = await admin
+    .from("teams")
+    .insert({ team_code: TEAM2_CODE, team_name: `E2E Scoring Team ${RUN}`, status: "registered" })
+    .select("id")
+    .single()
+  if (teamErr2 || !team2) {
     await admin.auth.admin.deleteUser(team2UserId).catch(() => {})
-    throw new Error(`seed team2 failed: ${teamErr2.message}`)
+    throw new Error(`seed team2 failed: ${teamErr2?.message}`)
   }
+
+  const { data: reg2, error: reg2Err } = await admin
+    .from("registrations")
+    .insert({ name: "Scoring Leader", reg_no: `${RUN}-SCORE-01`, phone: "0000000000", email: TEAM2_EMAIL, auth_user_id: team2UserId })
+    .select("id")
+    .single()
+  if (reg2Err || !reg2) {
+    await admin.auth.admin.deleteUser(team2UserId).catch(() => {})
+    throw new Error(`seed member2 registration failed: ${reg2Err?.message}`)
+  }
+  registrationIds.push(reg2.id)
+
+  const { error: tm2Err } = await admin.from("team_members").insert({ team_id: team2.id, registration_id: reg2.id, role: "leader" })
+  if (tm2Err) throw new Error(`seed team2_members failed: ${tm2Err.message}`)
 
   await admin.from("leaderboard_visibility").upsert({ round: "round1", is_published: false, published_at: null }, { onConflict: "round" })
 
@@ -83,6 +112,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await admin.from("teams").delete().in("team_code", [TEAM_CODE, TEAM2_CODE])
+  await admin.from("registrations").delete().in("id", registrationIds)
   await admin.auth.admin.deleteUser(teamUserId).catch(() => {})
   await admin.auth.admin.deleteUser(team2UserId).catch(() => {})
   await admin.from("leaderboard_visibility").upsert({ round: "round1", is_published: false, published_at: null }, { onConflict: "round" })
@@ -99,8 +129,10 @@ async function login(page: Page, email: string, password: string) {
 
 async function attendanceRows(day: number) {
   const { data: team } = await admin.from("teams").select("id").eq("team_code", TEAM_CODE).single()
-  const { data } = await admin.from("attendance").select("member_key, is_present").eq("team_id", team!.id).eq("day", day)
-  return (data ?? []).sort((a: { member_key: string }, b: { member_key: string }) => a.member_key.localeCompare(b.member_key))
+  const { data: members } = await admin.from("team_members").select("registration_id").eq("team_id", team!.id)
+  const regIds = (members ?? []).map((m: { registration_id: string }) => m.registration_id)
+  const { data } = await admin.from("attendance").select("registration_id, is_present").in("registration_id", regIds).eq("day", day)
+  return (data ?? []).sort((a: { registration_id: string }, b: { registration_id: string }) => a.registration_id.localeCompare(b.registration_id))
 }
 
 async function waitForDb(check: () => Promise<boolean>, timeout = 15_000) {
@@ -120,7 +152,7 @@ test("attendance: mark whole team, tweak one member, days independent, CSV butto
   await expect(page.locator("body")).toContainText("Attendance")
   await expect(page.locator("body")).toContainText(TEAM_CODE)
 
-  const card = page.locator(".card", { hasText: TEAM_CODE }).first()
+  const card = page.locator('[data-testid="team-roster"] .card', { hasText: TEAM_CODE }).first()
   await expect(card.locator('input[type="checkbox"]')).toHaveCount(3)
 
   await card.locator('button[title="Mark whole team present"]').click()
@@ -132,7 +164,7 @@ test("attendance: mark whole team, tweak one member, days independent, CSV butto
   await waitForDb(async () => (await attendanceRows(1)).filter((r: { is_present: boolean }) => r.is_present).length === 2)
 
   await page.goto("/admin/attendance?day=2")
-  const day2card = page.locator(".card", { hasText: TEAM_CODE }).first()
+  const day2card = page.locator('[data-testid="team-roster"] .card', { hasText: TEAM_CODE }).first()
   await expect(day2card.locator('input[type="checkbox"]:checked')).toHaveCount(0)
 
   await day2card.locator('button[title="Mark whole team present"]').click()
@@ -140,13 +172,15 @@ test("attendance: mark whole team, tweak one member, days independent, CSV butto
   await waitForDb(async () => (await attendanceRows(2)).filter((r: { is_present: boolean }) => r.is_present).length === 3)
 
   await page.goto("/admin/attendance")
-  const day1again = page.locator(".card", { hasText: TEAM_CODE }).first()
+  const day1again = page.locator('[data-testid="team-roster"] .card', { hasText: TEAM_CODE }).first()
   await expect(day1again.locator('input[type="checkbox"]:checked')).toHaveCount(2, { timeout: 15_000 })
 
   await expect(page.locator('button:has-text("Download CSV")')).toBeVisible()
-  if (!process.env.ATTENDANCE_SHEETS_WEBHOOK_URL) {
-    await expect(page.locator("body")).toContainText("Connect Google Sheet")
-  }
+  // Whether a Google Sheet mirror is connected is an environment fact (a
+  // real webhook may already be saved in this Supabase project's DB,
+  // independent of this test's own env), so accept either valid state
+  // rather than assuming "not connected".
+  await expect(page.locator('button:has-text("Connect Google Sheet"), button:has-text("Disconnect sheet")').first()).toBeVisible()
 
   const d1 = await attendanceRows(1)
   expect(d1).toHaveLength(3)
@@ -221,7 +255,7 @@ test("final leaderboard is weighted 20/10/70", async ({ page }) => {
   await login(page, process.env.E2E_ADMIN_EMAIL!, process.env.E2E_ADMIN_PASSWORD!)
   await page.waitForURL("**/admin")
   await page.goto("/leaderboard")
-  await expect(page.locator("body")).toContainText("Weighted Score", { timeout: 20_000 })
+  await expect(page.locator("body")).toContainText("Every round, one table", { timeout: 20_000 })
   await expect(page.locator("body")).toContainText("100")
 
   const { data: finalRows } = await admin.from("leaderboard_final_public").select("team_code, total_score")
