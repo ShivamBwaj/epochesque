@@ -32,7 +32,7 @@ export default async function SubmitRound1Page() {
       <SectionHeading
         kicker="PPT ROUND"
         title="Submit your deck"
-        description="Upload your pitch deck as .ppt, .pptx or .pdf. Max 10 MB. Re-upload any time until the deadline — the newest file wins."
+        description="Upload your pitch deck as .ppt, .pptx or .pdf. Max 5 MB. Re-upload any time until the deadline — the newest file wins."
       />
 
       {templateUrl ? (

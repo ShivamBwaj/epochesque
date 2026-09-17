@@ -169,9 +169,9 @@ export async function submitRound1Action(_prev: SubmitState, formData: FormData)
   }
   const contentRange = headRes.headers.get("content-range")
   const realSize = contentRange ? Number(contentRange.split("/")[1]) : fileSize
-  if (Number.isFinite(realSize) && realSize > 10 * 1024 * 1024) {
+  if (Number.isFinite(realSize) && realSize > 5 * 1024 * 1024) {
     await admin.storage.from("submissions").remove([path]).catch(() => {})
-    return { error: "File is larger than 10 MB." }
+    return { error: "File is larger than 5 MB." }
   }
 
   const { data: existing } = await admin

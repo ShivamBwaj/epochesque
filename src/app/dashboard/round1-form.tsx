@@ -79,7 +79,7 @@ export function Round1Form() {
       {state.ok && state.message ? <Alert tone="success">{state.message}</Alert> : null}
       {progress ? <Alert tone="info">{progress}</Alert> : null}
       <div>
-        <Label htmlFor="file">Pitch deck (.ppt, .pptx or .pdf — max 10 MB)</Label>
+        <Label htmlFor="file">Pitch deck (.ppt, .pptx or .pdf — max 5 MB)</Label>
         <Input
           id="file"
           name="file"
