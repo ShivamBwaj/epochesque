@@ -58,9 +58,9 @@ export default async function DashboardOverviewPage() {
             </div>
           ) : (
             <div className="mt-3 space-y-3">
-              <p className="text-sm text-slate-300">Not rolled yet — watch the Roll Stage.</p>
+              <p className="text-sm text-slate-300">Not rolled yet — your leader can roll it right here.</p>
               <LinkButton href="/dashboard/problem-statement" size="sm">
-                🎁 Watch the stage
+                🎁 Roll your problem statement
               </LinkButton>
             </div>
           )}
