@@ -14,7 +14,7 @@ const groups: { label: string; links: NavLink[] }[] = [
     label: "Event Day",
     links: [
       { href: "/admin", label: "Overview", exact: true },
-      { href: "/admin/roll", label: "Roll Stage" },
+      { href: "/admin/roll", label: "Rolls" },
       { href: "/admin/gaming", label: "Gaming" },
     ],
   },

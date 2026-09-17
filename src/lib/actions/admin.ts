@@ -2,10 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { createClient } from "@/lib/supabase/server"
 import { getSessionUser, isAdmin } from "@/lib/auth"
 import type { WinnersEntry } from "@/lib/database.types"
-import type { RollResult } from "@/components/case-opener"
 import { queueRosterChangeResync } from "@/lib/actions/attendance"
 import { pushScoresToSheets, setScoresSheetsWebhookUrl, scoresSheetsWebhookConfigured, type SheetsScoreRow } from "@/lib/sheets"
 import { after } from "next/server"
@@ -55,34 +53,6 @@ async function audit(
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const ROUNDS = ["round1", "round2", "final"] as const
 type Round = (typeof ROUNDS)[number]
-
-export async function adminRollForTeamAction(teamId: string): Promise<RollResult> {
-  const user = await requireAdminAction()
-  if (!user) return { ok: false, error: "Admins only." }
-
-  const admin = createAdminClient()
-  const { data: team } = await admin.from("teams").select("team_code").eq("id", teamId).maybeSingle()
-  if (!team) return { ok: false, error: "Team not found." }
-
-  const supabase = await createClient()
-  const { data, error } = await supabase.rpc("roll_problem_statement_for", { p_team_id: teamId })
-  if (error) {
-    const msg = error.message.includes("ROLL_POOL_EMPTY")
-      ? "All problem statements are taken. Add more in Problems."
-      : error.message.includes("ROLL_NOT_ELIGIBLE")
-        ? "This team is not eligible to roll."
-        : "Could not roll. Try again."
-    return { ok: false, error: msg }
-  }
-
-  const ps = (data ?? [])[0]
-  await audit(admin, user, "roll.stage", team.team_code, { ps: ps?.code })
-  revalidatePath("/admin/roll")
-  revalidatePath("/admin")
-  revalidatePath("/dashboard/problem-statement")
-  revalidatePath("/dashboard")
-  return ps ? { ok: true, ps } : { ok: false, error: "Could not roll. Try again." }
-}
 
 export interface AddRegistrationResult extends ActionResult {
   registrationId?: string

@@ -53,25 +53,25 @@ export default async function AdminOverviewPage() {
       <SectionHeading
         kicker="MISSION CONTROL"
         title="Overview"
-        description="Live state of the event — the roll stage, submissions, and the last admin actions."
+        description="Live state of the event — rolls, submissions, and the last admin actions."
       />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="ring-glow p-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="hud-label">🎰 THE ROLL — STAGE</p>
+              <p className="hud-label">🎰 THE ROLL</p>
               <div className="mt-2 flex items-center gap-2">
                 <Badge tone={teamRows.length > 0 && taken === teamRows.length ? "green" : "cyan"}>
                   {teamRows.length > 0 ? `${teamRows.filter((t) => t.problem_statement_id !== null).length}/${teamRows.length} rolled` : "no teams yet"}
                 </Badge>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Call teams up and roll the case on the projector — results lock instantly to each team.
+                Teams roll their own problem statement from their dashboard once you open it — results lock instantly.
               </p>
             </div>
             <LinkButton href="/admin/roll">
-              Open Roll Stage →
+              Open Rolls →
             </LinkButton>
           </div>
         </Card>

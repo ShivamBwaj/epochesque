@@ -5,13 +5,48 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getViewer } from "@/lib/auth"
 import { isTeamLeader } from "@/lib/database.types"
-import { getEventTiming, getEventFlags, deadlinePassed } from "@/lib/settings"
+import { getEventTiming, getEventFlags, deadlinePassed, rollIsOpen } from "@/lib/settings"
 import { deckFileError, deckMagicError, sanitizeFileName } from "@/lib/validate"
+import type { RollResult } from "@/components/case-opener"
 
 export interface SubmitState {
   ok?: boolean
   error?: string
   message?: string
+}
+
+const ROLL_ERROR_MESSAGES: Record<string, string> = {
+  ROLL_NO_TEAM: "Your account isn't linked to a team. Contact the organizers.",
+  ROLL_LEADER_ONLY: "Only your team leader can roll the problem statement.",
+  ROLL_NOT_ELIGIBLE: "Your team can't roll right now. Contact the organizers.",
+  ROLL_POOL_EMPTY: "All problem statements are taken. Talk to the organizers at the desk.",
+}
+
+export async function rollProblemStatementAction(): Promise<RollResult> {
+  const viewer = await getViewer()
+  if (!viewer || viewer.role !== "team" || !viewer.team) return { ok: false, error: "Not signed in as a team." }
+  if (!isTeamLeader(viewer.team, viewer.registration?.id)) {
+    return { ok: false, error: "Only your team leader can roll the problem statement." }
+  }
+
+  const [timing, flags] = await Promise.all([getEventTiming(), getEventFlags()])
+  if (!rollIsOpen(flags, timing)) {
+    return { ok: false, error: "Rolling isn't open yet — wait for the organizers to open it." }
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc("roll_problem_statement")
+  if (error) {
+    const msg = Object.keys(ROLL_ERROR_MESSAGES).find((code) => error.message.includes(code))
+    return { ok: false, error: msg ? ROLL_ERROR_MESSAGES[msg] : "Could not roll. Try again." }
+  }
+
+  const ps = (data ?? [])[0]
+  if (!ps) return { ok: false, error: "Could not roll. Try again." }
+
+  revalidatePath("/dashboard/problem-statement")
+  revalidatePath("/dashboard")
+  return { ok: true, ps }
 }
 
 const GITHUB_RE = /^https:\/\/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/

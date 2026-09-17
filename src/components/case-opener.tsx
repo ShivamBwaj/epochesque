@@ -384,6 +384,7 @@ export function CaseOpener({
           setParticles(makeParticles())
           chimeRef.current()
           onLandedRef.current?.()
+          setTimeout(() => router.refresh(), 3000)
           return
         }
       }
@@ -494,7 +495,7 @@ export function CaseOpener({
               onClick={() => router.refresh()}
               className="mt-4 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-xs text-muted-foreground transition hover:text-foreground"
             >
-              ⟳ Refresh team list
+              View my problem statement →
             </button>
           </motion.div>
         ) : (

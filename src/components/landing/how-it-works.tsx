@@ -14,7 +14,7 @@ const STEPS = [
   {
     n: "03",
     title: "Roll your problem",
-    body: "Hit ROLL on the stage. The reel spins, decelerates, and locks a problem statement to your team — instantly and irreversibly.",
+    body: "Your leader hits ROLL right from the team dashboard. The reel spins, decelerates, and locks a problem statement to your team — instantly and irreversibly.",
   },
   {
     n: "04",
