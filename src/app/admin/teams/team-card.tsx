@@ -1,16 +1,18 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   adminMoveTeamMemberAction,
   adminSetTeamLeaderAction,
+  adminRenameTeamAction,
   adminResetParticipantAccountAction,
   deleteTeamAction,
 } from "@/lib/actions/admin"
 import type { ActionResult, ResetPasswordResult } from "@/lib/actions/admin"
 import type { RosterTeam } from "./page"
 import { SubmitButton } from "@/components/submit-button"
-import { Badge, Card, StatusBadge } from "@/components/ui"
+import { Badge, Card, Input, StatusBadge } from "@/components/ui"
 
 const selectClass =
   "max-w-full truncate rounded-lg border border-white/[0.08] bg-surface/80 px-2 py-1 text-xs text-foreground focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/30 transition-colors"
@@ -31,6 +33,20 @@ export function TeamCard({
   const [, moveAction] = useActionState<ActionResult, FormData>(async (_p, fd) => adminMoveTeamMemberAction(fd), { ok: false })
   const [, leaderAction] = useActionState<ActionResult, FormData>(async (_p, fd) => adminSetTeamLeaderAction(fd), { ok: false })
   const [resetState, resetAction] = useActionState<ResetPasswordResult, FormData>(adminResetParticipantAccountAction, { ok: false })
+  const router = useRouter()
+  const [renaming, setRenaming] = useState(false)
+  const [nameDraft, setNameDraft] = useState(team.team_name)
+  const [renameState, renameAction, renamePending] = useActionState<ActionResult, FormData>(
+    async (_p, fd) => {
+      const res = await adminRenameTeamAction(fd)
+      if (res.ok) {
+        setRenaming(false)
+        router.refresh()
+      }
+      return res
+    },
+    { ok: false }
+  )
 
   const attendanceOn = !!presentByReg
   const presentCount = attendanceOn ? team.members.filter((m) => presentByReg!.get(m.registrationId)).length : 0
@@ -39,9 +55,45 @@ export function TeamCard({
   return (
     <Card className={`p-4 ${team.members.length < 2 ? "border-amber-500/40" : ""}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="font-mono text-xs tracking-wide text-accent-hover">{team.team_code}</p>
-          <p className="font-medium text-foreground">{team.team_name}</p>
+          {renaming ? (
+            <form action={renameAction} className="mt-1 flex items-center gap-1.5">
+              <input type="hidden" name="teamId" value={team.id} />
+              <Input
+                name="teamName"
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                maxLength={120}
+                className="h-8 py-1 text-sm"
+                autoFocus
+              />
+              <SubmitButton size="sm" pendingText="…">
+                Save
+              </SubmitButton>
+              <button
+                type="button"
+                onClick={() => {
+                  setNameDraft(team.team_name)
+                  setRenaming(false)
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setRenaming(true)}
+              className="group flex items-center gap-1.5 text-left"
+              title="Rename team"
+            >
+              <p className="font-medium text-foreground">{team.team_name}</p>
+              <span className="text-xs text-muted-foreground opacity-0 transition group-hover:opacity-100">✎</span>
+            </button>
+          )}
+          {renameState.error && !renamePending ? <p className="mt-1 text-xs text-red-300">{renameState.error}</p> : null}
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={team.status} />

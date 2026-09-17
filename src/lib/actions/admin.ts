@@ -405,6 +405,25 @@ export async function setProjectsPublishedAction(formData: FormData): Promise<vo
   revalidatePath("/leaderboard")
 }
 
+export async function adminRenameTeamAction(formData: FormData): Promise<ActionResult> {
+  const user = await requireAdminAction()
+  if (!user) return { ok: false, error: "Admins only." }
+
+  const teamId = String(formData.get("teamId") ?? "")
+  const teamName = String(formData.get("teamName") ?? "").trim().slice(0, 120)
+  if (!teamId) return { ok: false, error: "Missing team." }
+  if (!teamName) return { ok: false, error: "Team name can't be empty." }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from("teams").update({ team_name: teamName }).eq("id", teamId)
+  if (error) return { ok: false, error: "Could not rename the team." }
+
+  await audit(admin, user, "team.rename", teamId, { teamName })
+  await queueRosterChangeResync()
+  revalidatePath("/admin/teams")
+  return { ok: true }
+}
+
 export async function adminSetTeamLeaderAction(formData: FormData): Promise<ActionResult> {
   const user = await requireAdminAction()
   if (!user) return { ok: false, error: "Admins only." }
