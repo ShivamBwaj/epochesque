@@ -28,7 +28,7 @@ export default async function DashboardGamingPage() {
       <SectionHeading
         kicker="SIDE QUEST"
         title="Gaming Slots"
-        description="Tekken or FIFA — 10 minutes of glory between builds. 2:00 PM to 5:30 PM, one slot per team, one game per team. First come, first served."
+        description="Tekken (5-min slots) or FIFA (10-min slots) — a break between builds. 2:00 PM to 5:30 PM, one slot per team, one game per team. First come, first served."
       />
 
       {slotCount === 0 ? (

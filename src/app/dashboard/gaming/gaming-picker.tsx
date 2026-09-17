@@ -23,8 +23,9 @@ interface MyBooking {
   label: string
 }
 
-function slotEnd(i: number) {
-  const total = 14 * 60 + (i + 1) * 10
+function slotEnd(i: number, game: string) {
+  const step = game === "tekken" ? 5 : 10
+  const total = 14 * 60 + (i + 1) * step
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`
 }
 
@@ -91,7 +92,7 @@ export function GamingPicker({ games, myBooking, isLeader }: { games: GameView[]
                         type="button"
                         disabled={disabled}
                         onClick={() => book(s)}
-                        title={s.taken && !isMine ? "Taken by another team" : `${s.startTime}–${slotEnd(i)}`}
+                        title={s.taken && !isMine ? "Taken by another team" : `${s.startTime}–${slotEnd(i, g.game)}`}
                         className={`rounded-xl border px-3 py-3 text-center transition ${
                           isMine
                             ? "border-accent/50 bg-accent-soft text-accent-hover ring-glow"

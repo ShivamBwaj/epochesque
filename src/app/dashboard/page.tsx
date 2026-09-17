@@ -80,7 +80,7 @@ export default async function DashboardOverviewPage() {
             </div>
           ) : (
             <div className="mt-3 space-y-3">
-              <p className="text-sm text-slate-300">Tekken or FIFA — 10-minute slots, 2:00 to 5:30 PM.</p>
+              <p className="text-sm text-slate-300">Tekken (5-min) or FIFA (10-min), 2:00 to 5:30 PM.</p>
               <LinkButton href="/dashboard/gaming" variant="secondary" size="sm">
                 Pick your slot
               </LinkButton>

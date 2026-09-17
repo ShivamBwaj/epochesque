@@ -54,7 +54,7 @@ export default async function AdminGamingPage() {
       <SectionHeading
         kicker="SIDE QUEST"
         title="Gaming Slots"
-        description="Tekken and FIFA, 10-minute slots from 2:00 PM to 5:30 PM. One team per slot, one slot per team — bookings are atomic, no double-booking possible."
+        description="Tekken (5-min slots) and FIFA (10-min slots), both 2:00 PM to 5:30 PM. One team per slot, one slot per team — bookings are atomic, no double-booking possible."
       />
 
       <Card className={`p-5 ${flags.gamingOpen ? "ring-glow" : ""}`}>
@@ -103,7 +103,8 @@ export default async function AdminGamingPage() {
               </div>
               <div>
                 {gameSlots.map((s, i) => {
-                  const endMinutes = 14 * 60 + (i + 1) * 10
+                  const stepMinutes = game === "tekken" ? 5 : 10
+                  const endMinutes = 14 * 60 + (i + 1) * stepMinutes
                   const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`
                   const taken = s.taken_by_team_id !== null
                   return (
