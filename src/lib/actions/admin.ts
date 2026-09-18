@@ -435,13 +435,15 @@ export async function setFinalOpenAction(formData: FormData): Promise<void> {
   revalidatePath("/dashboard")
 }
 
-export async function setGamingOpenAction(formData: FormData): Promise<void> {
+export async function setGameOpenAction(formData: FormData): Promise<void> {
   const user = await requireAdminAction()
   if (!user) return
+  const game = String(formData.get("game") ?? "")
+  if (game !== "tekken" && game !== "fifa") return
   const open = String(formData.get("open") ?? "") === "true"
   const admin = createAdminClient()
-  await admin.from("event_settings").upsert({ key: "gaming_open", value: open as never }, { onConflict: "key" })
-  await audit(admin, user, open ? "gaming.open" : "gaming.close", undefined, undefined)
+  await admin.from("event_settings").upsert({ key: `${game}_open`, value: open as never }, { onConflict: "key" })
+  await audit(admin, user, open ? `gaming.${game}.open` : `gaming.${game}.close`, undefined, undefined)
   revalidatePath("/admin/gaming")
   revalidatePath("/dashboard/gaming")
   revalidatePath("/dashboard")

@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { requireAdminPage } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getEventFlags } from "@/lib/settings"
-import { clearGameSlotAction, setGamingOpenAction } from "@/lib/actions/admin"
+import { clearGameSlotAction, setGameOpenAction } from "@/lib/actions/admin"
 import { gameLabel, type GameSlot } from "@/lib/database.types"
 import { SubmitButton } from "@/components/submit-button"
 import { Badge, Card, EmptyState, SectionHeading, StatCard } from "@/components/ui"
@@ -11,6 +11,12 @@ export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Gaming Slots",
+}
+
+function addMinutes(hhmm: string, minutes: number): string {
+  const [h, m] = hhmm.split(":").map(Number)
+  const total = h * 60 + m + minutes
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`
 }
 
 export default async function AdminGamingPage() {
@@ -54,40 +60,48 @@ export default async function AdminGamingPage() {
       <SectionHeading
         kicker="SIDE QUEST"
         title="Gaming Slots"
-        description="Tekken (5-min slots) and FIFA (10-min slots), both 2:00 PM to 5:30 PM. One team per slot, one slot per team — bookings are atomic, no double-booking possible."
+        description="Tekken (5-min slots, 11:30 AM–1:00 PM & 2:00–5:00 PM) and FIFA (10-min slots, 2:00–5:30 PM). One team per slot, one slot per team — bookings are atomic, no double-booking possible. Open each game's booking independently."
       />
 
-      <Card className={`p-5 ${flags.gamingOpen ? "ring-glow" : ""}`}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="hud-label">🎮 SLOT BOOKING</p>
-            <div className="mt-2 flex items-center gap-2">
-              {flags.gamingOpen ? (
-                <Badge tone="green">open — teams can book now</Badge>
-              ) : (
-                <Badge tone="slate">closed — teams can&apos;t book yet</Badge>
-              )}
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Flips slot booking on for every team&apos;s dashboard. Leave it off until you&apos;re ready for the rush.
-            </p>
-          </div>
-          <form action={setGamingOpenAction}>
-            <input type="hidden" name="open" value={flags.gamingOpen ? "false" : "true"} />
-            <SubmitButton
-              variant={flags.gamingOpen ? "secondary" : "primary"}
-              confirm={flags.gamingOpen ? "Close gaming slot booking?" : "Open gaming slot booking for ALL teams?"}
-              pendingText="Working…"
-            >
-              {flags.gamingOpen ? "Close booking" : "Open booking"}
-            </SubmitButton>
-          </form>
-        </div>
-      </Card>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {(["tekken", "fifa"] as const).map((game) => {
+          const open = game === "tekken" ? flags.tekkenOpen : flags.fifaOpen
+          return (
+            <Card key={game} className={`p-5 ${open ? "ring-glow" : ""}`}>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="hud-label">🎮 {gameLabel(game).toUpperCase()} BOOKING</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    {open ? (
+                      <Badge tone="green">open — teams can book now</Badge>
+                    ) : (
+                      <Badge tone="slate">closed — teams can&apos;t book yet</Badge>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Flips {gameLabel(game)} slot booking on for every team&apos;s dashboard, independent of the other game.
+                  </p>
+                </div>
+                <form action={setGameOpenAction}>
+                  <input type="hidden" name="game" value={game} />
+                  <input type="hidden" name="open" value={open ? "false" : "true"} />
+                  <SubmitButton
+                    variant={open ? "secondary" : "primary"}
+                    confirm={open ? `Close ${gameLabel(game)} slot booking?` : `Open ${gameLabel(game)} slot booking for ALL teams?`}
+                    pendingText="Working…"
+                  >
+                    {open ? "Close booking" : "Open booking"}
+                  </SubmitButton>
+                </form>
+              </div>
+            </Card>
+          )
+        })}
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Slots booked" value={`${booked}/${allSlots.length}`} sub="across both games" />
-        <StatCard label="Tekken" value={`${games[0].slots.filter((s) => s.taken_by_team_id).length}/${games[0].slots.length}`} sub="2:00 – 5:30 PM" />
+        <StatCard label="Tekken" value={`${games[0].slots.filter((s) => s.taken_by_team_id).length}/${games[0].slots.length}`} sub="11:30 AM – 5:00 PM" />
         <StatCard label="FIFA" value={`${games[1].slots.filter((s) => s.taken_by_team_id).length}/${games[1].slots.length}`} sub="2:00 – 5:30 PM" />
       </div>
 
@@ -102,10 +116,9 @@ export default async function AdminGamingPage() {
                 <Badge tone="cyan">{gameSlots.filter((s) => s.taken_by_team_id).length}/{gameSlots.length} TAKEN</Badge>
               </div>
               <div>
-                {gameSlots.map((s, i) => {
+                {gameSlots.map((s) => {
                   const stepMinutes = game === "tekken" ? 5 : 10
-                  const endMinutes = 14 * 60 + (i + 1) * stepMinutes
-                  const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`
+                  const endTime = addMinutes(s.start_time, stepMinutes)
                   const taken = s.taken_by_team_id !== null
                   return (
                     <div

@@ -14,6 +14,7 @@ interface SlotView {
 interface GameView {
   game: string
   label: string
+  open: boolean
   slots: SlotView[]
 }
 
@@ -23,9 +24,10 @@ interface MyBooking {
   label: string
 }
 
-function slotEnd(i: number, game: string) {
+function slotEnd(startTime: string, game: string) {
   const step = game === "tekken" ? 5 : 10
-  const total = 14 * 60 + (i + 1) * step
+  const [h, m] = startTime.split(":").map(Number)
+  const total = h * 60 + m + step
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`
 }
 
@@ -78,12 +80,19 @@ export function GamingPicker({ games, myBooking, isLeader }: { games: GameView[]
               <Card key={g.game} className="overflow-hidden">
                 <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3">
                   <h3 className="text-sm font-semibold tracking-tight text-foreground">{g.label}</h3>
-                  <Badge tone={free > 0 ? "green" : "red"}>
-                    {g.slots.filter((s) => !s.taken).length}/{g.slots.length} OPEN
-                  </Badge>
+                  {g.open ? (
+                    <Badge tone={free > 0 ? "green" : "red"}>
+                      {g.slots.filter((s) => !s.taken).length}/{g.slots.length} OPEN
+                    </Badge>
+                  ) : (
+                    <Badge tone="slate">BOOKING CLOSED</Badge>
+                  )}
                 </div>
+                {!g.open ? (
+                  <p className="p-4 text-sm text-muted-foreground">Booking for {g.label} isn&apos;t open yet.</p>
+                ) : (
                 <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
-                  {g.slots.map((s, i) => {
+                  {g.slots.map((s) => {
                     const isMine = myBooking?.game === g.game && myBooking?.startTime === s.startTime
                     const disabled = s.taken || !!myBooking || busySlot !== null || pending || !isLeader
                     return (
@@ -92,7 +101,7 @@ export function GamingPicker({ games, myBooking, isLeader }: { games: GameView[]
                         type="button"
                         disabled={disabled}
                         onClick={() => book(s)}
-                        title={s.taken && !isMine ? "Taken by another team" : `${s.startTime}–${slotEnd(i, g.game)}`}
+                        title={s.taken && !isMine ? "Taken by another team" : `${s.startTime}–${slotEnd(s.startTime, g.game)}`}
                         className={`rounded-xl border px-3 py-3 text-center transition ${
                           isMine
                             ? "border-accent/50 bg-accent-soft text-accent-hover ring-glow"
@@ -109,6 +118,7 @@ export function GamingPicker({ games, myBooking, isLeader }: { games: GameView[]
                     )
                   })}
                 </div>
+                )}
               </Card>
             )
           })}

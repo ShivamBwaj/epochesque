@@ -78,8 +78,13 @@ export async function bookGameSlotAction(slotId: string): Promise<BookSlotResult
     return { ok: false, error: "Only your team leader can book a gaming slot." }
   }
 
+  const admin = createAdminClient()
+  const { data: slotRow } = await admin.from("game_slots").select("game").eq("id", slotId).maybeSingle()
+  if (!slotRow) return { ok: false, error: "That slot no longer exists. Refresh the page." }
+
   const flags = await getEventFlags()
-  if (!flags.gamingOpen) return { ok: false, error: "Gaming slots aren't open yet — wait for the organizers to open booking." }
+  const gameOpen = slotRow.game === "tekken" ? flags.tekkenOpen : flags.fifaOpen
+  if (!gameOpen) return { ok: false, error: "Booking for this game isn't open yet — wait for the organizers to open it." }
 
   const supabase = await createClient()
   const { data, error } = await supabase.rpc("book_game_slot", { p_slot_id: slotId })

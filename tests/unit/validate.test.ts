@@ -35,15 +35,15 @@ describe("parseScoresCsv", () => {
 })
 
 describe("deckFileError", () => {
-  it("allows ppt/pptx/pdf under 10MB", () => {
+  it("allows ppt/pptx/pdf under 5MB", () => {
     expect(deckFileError("deck.pptx", 1024)).toBeNull()
     expect(deckFileError("deck.PPT", 1024)).toBeNull()
-    expect(deckFileError("deck.pdf", 10 * 1024 * 1024)).toBeNull()
+    expect(deckFileError("deck.pdf", 5 * 1024 * 1024)).toBeNull()
   })
 
   it("rejects wrong extensions and oversize", () => {
     expect(deckFileError("virus.exe", 10)).toMatch(/Only/)
-    expect(deckFileError("big.pptx", 10 * 1024 * 1024 + 1)).toMatch(/10 MB/)
+    expect(deckFileError("big.pptx", 5 * 1024 * 1024 + 1)).toMatch(/5 MB/)
   })
 })
 
