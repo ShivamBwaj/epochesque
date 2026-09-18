@@ -1,10 +1,9 @@
 import type { Metadata } from "next"
-import { createClient } from "@/lib/supabase/server"
 import { requireAdminPage } from "@/lib/auth"
 import { Badge, Card, SectionHeading } from "@/components/ui"
-import { getLeaderboardData } from "@/lib/leaderboard"
+import { getLeaderboardData, getWinners } from "@/lib/leaderboard"
 import { TrackTabs } from "./track-tabs"
-import type { Json, WinnersEntry } from "@/lib/database.types"
+import type { WinnersEntry } from "@/lib/database.types"
 
 export const dynamic = "force-dynamic"
 
@@ -18,18 +17,6 @@ const MEDALS: Record<number, { icon: string; label: string; border: string; tint
   1: { icon: "🏆", label: "GOLD", border: "border-amber-400/50", tint: "from-amber-500/10" },
   2: { icon: "🥈", label: "SILVER", border: "border-slate-300/40", tint: "from-slate-300/10" },
   3: { icon: "🥉", label: "BRONZE", border: "border-orange-400/40", tint: "from-orange-400/10" },
-}
-
-function parseWinners(body: Json | null): WinnersEntry[] {
-  if (!Array.isArray(body)) return []
-  const out: WinnersEntry[] = []
-  for (const e of body) {
-    if (typeof e !== "object" || e === null || Array.isArray(e)) continue
-    const { position, team_code, team_name, prize } = e
-    if (typeof position !== "number" || typeof team_code !== "string" || typeof team_name !== "string") continue
-    out.push({ position, team_code, team_name, prize: typeof prize === "string" ? prize : undefined })
-  }
-  return out.sort((a, b) => a.position - b.position)
 }
 
 function WinnerCard({ entry }: { entry: WinnersEntry }) {
@@ -60,18 +47,10 @@ function WinnerCard({ entry }: { entry: WinnersEntry }) {
 
 export default async function LeaderboardPage() {
   await requireAdminPage()
-  const supabase = await createClient()
-  const [{ tracks, rowsByTrack, unassigned }, winnersRes] = await Promise.all([
-    getLeaderboardData(),
-    supabase.from("winners_public").select("*"),
-  ])
+  const [{ tracks, rowsByTrack, unassigned }, winnersRow] = await Promise.all([getLeaderboardData(), getWinners()])
 
-  const winnerRows = (winnersRes.data ?? [])
-    .filter((w) => w.body != null)
-    .sort((a, b) => (b.published_at ?? "").localeCompare(a.published_at ?? ""))
-  const winnerRow = winnerRows[0]
-  const winners = winnerRow ? parseWinners(winnerRow.body) : []
-  const winnersTitle = winnerRow?.title ?? "Winners"
+  const winners = winnersRow?.entries ?? []
+  const winnersTitle = winnersRow?.title ?? "Winners"
 
   const tabs = [
     ...tracks.map((track) => ({ key: track, label: track, rows: rowsByTrack.get(track) ?? [] })),

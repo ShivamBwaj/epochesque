@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { requireAdminPage } from "@/lib/auth"
-import { getLeaderboardData } from "@/lib/leaderboard"
-import type { UnifiedRow } from "@/lib/leaderboard"
+import { getWinners } from "@/lib/leaderboard"
+import type { WinnersEntry } from "@/lib/database.types"
 
 export const dynamic = "force-dynamic"
 
@@ -16,9 +16,9 @@ const MEDAL: Record<number, { icon: string; border: string; glow: string }> = {
   3: { icon: "🥉", border: "border-orange-400/40", glow: "" },
 }
 
-function PodiumSpot({ row, place }: { row: UnifiedRow | undefined; place: number }) {
+function PodiumSpot({ entry, place }: { entry: WinnersEntry | undefined; place: number }) {
   const medal = MEDAL[place]
-  if (!row) {
+  if (!entry) {
     return (
       <div className={`flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5`}>
         <span className="font-mono text-xs text-muted/40">— empty —</span>
@@ -30,12 +30,12 @@ function PodiumSpot({ row, place }: { row: UnifiedRow | undefined; place: number
       <div className="flex min-w-0 items-center gap-2">
         <span className="text-lg leading-none">{medal.icon}</span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold leading-tight text-slate-100">{row.teamName}</p>
-          <p className="truncate font-mono text-[10px] leading-tight text-cyan-300/70">{row.teamCode}</p>
+          <p className="truncate text-sm font-semibold leading-tight text-slate-100">{entry.team_name}</p>
+          <p className="truncate font-mono text-[10px] leading-tight text-cyan-300/70">{entry.team_code}</p>
         </div>
       </div>
       <span className="shrink-0 font-mono text-sm font-bold tabular-nums text-slate-100">
-        {row.total === null ? "🔒" : row.total}
+        {entry.score ?? "—"}
       </span>
     </div>
   )
@@ -43,8 +43,13 @@ function PodiumSpot({ row, place }: { row: UnifiedRow | undefined; place: number
 
 export default async function PodiumPage() {
   await requireAdminPage()
-  const { tracks, rowsByTrack } = await getLeaderboardData()
-  const columns = tracks.map((t) => ({ label: t, rows: rowsByTrack.get(t) ?? [] }))
+  const winners = await getWinners()
+  const entries = winners?.entries ?? []
+  const tracks = [...new Set(entries.map((e) => e.prize).filter((p): p is string => !!p))].sort()
+  const columns = tracks.map((label) => ({
+    label,
+    entries: entries.filter((e) => e.prize === label).sort((a, b) => a.position - b.position),
+  }))
 
   return (
     <div className="fixed inset-0 z-30 flex flex-col overflow-hidden bg-background px-6 pb-6 pt-24">
@@ -58,7 +63,7 @@ export default async function PodiumPage() {
             <p className="hud-label shrink-0 text-center text-accent-hover">{col.label}</p>
             <div className="flex min-h-0 flex-1 flex-col justify-center gap-2">
               {[1, 2, 3].map((place) => (
-                <PodiumSpot key={place} row={col.rows[place - 1]} place={place} />
+                <PodiumSpot key={place} entry={col.entries[place - 1]} place={place} />
               ))}
             </div>
           </div>

@@ -261,6 +261,7 @@ export interface WinnersEntry {
   team_code: string
   team_name: string
   prize?: string
+  score?: number
 }
 
 export interface EventTiming {

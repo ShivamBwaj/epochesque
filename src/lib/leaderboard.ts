@@ -1,7 +1,41 @@
 import "server-only"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import type { LeaderboardEntry } from "@/lib/database.types"
+import type { Json, LeaderboardEntry, WinnersEntry } from "@/lib/database.types"
+
+export function parseWinners(body: Json | null): WinnersEntry[] {
+  if (!Array.isArray(body)) return []
+  const out: WinnersEntry[] = []
+  for (const e of body) {
+    if (typeof e !== "object" || e === null || Array.isArray(e)) continue
+    const { position, team_code, team_name, prize, score } = e
+    if (typeof position !== "number" || typeof team_code !== "string" || typeof team_name !== "string") continue
+    out.push({
+      position,
+      team_code,
+      team_name,
+      prize: typeof prize === "string" ? prize : undefined,
+      score: typeof score === "number" ? score : undefined,
+    })
+  }
+  return out.sort((a, b) => a.position - b.position)
+}
+
+export interface WinnersRow {
+  title: string
+  entries: WinnersEntry[]
+}
+
+export async function getWinners(): Promise<WinnersRow | null> {
+  const supabase = await createClient()
+  const { data } = await supabase.from("winners_public").select("*")
+  const rows = (data ?? [])
+    .filter((w) => w.body != null)
+    .sort((a, b) => (b.published_at ?? "").localeCompare(a.published_at ?? ""))
+  const row = rows[0]
+  if (!row) return null
+  return { title: row.title ?? "Winners", entries: parseWinners(row.body) }
+}
 
 export interface UnifiedRow {
   teamId: string
