@@ -223,7 +223,7 @@ export function ScoringGrid({
                   {teams.map((t) => {
                     const ex = existing[t.id]
                     return (
-                      <tr key={t.id} className="transition hover:bg-white/[0.02]">
+                      <tr key={`${round}-${t.id}`} className="transition hover:bg-white/[0.02]">
                         <td className="px-4 py-2.5 font-mono text-xs tracking-wide text-accent-hover">{t.team_code}</td>
                         <td className="px-4 py-2.5 font-medium text-foreground">
                           <span className="block max-w-48 truncate" title={t.team_name}>{t.team_name}</span>
