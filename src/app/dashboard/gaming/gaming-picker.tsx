@@ -25,7 +25,7 @@ interface MyBooking {
 }
 
 function slotEnd(startTime: string, game: string) {
-  const step = game === "tekken" ? 5 : 10
+  const step = game === "tekken" ? 5 : 15
   const [h, m] = startTime.split(":").map(Number)
   const total = h * 60 + m + step
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`
