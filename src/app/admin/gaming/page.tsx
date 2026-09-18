@@ -60,7 +60,7 @@ export default async function AdminGamingPage() {
       <SectionHeading
         kicker="SIDE QUEST"
         title="Gaming Slots"
-        description="Tekken (5-min slots, 11:30 AM–1:00 PM & 2:00–5:00 PM) and FIFA (15-min slots, 11:40 AM–5:00 PM). One team per slot, one slot per team — bookings are atomic, no double-booking possible. Open each game's booking independently."
+        description="Tekken (5-min slots, 11:30 AM–1:00 PM & 2:00–5:00 PM) and FIFA (15-min slots, 12:00 PM–5:00 PM). One team per slot, one slot per team — bookings are atomic, no double-booking possible. Open each game's booking independently."
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -102,7 +102,7 @@ export default async function AdminGamingPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Slots booked" value={`${booked}/${allSlots.length}`} sub="across both games" />
         <StatCard label="Tekken" value={`${games[0].slots.filter((s) => s.taken_by_team_id).length}/${games[0].slots.length}`} sub="11:30 AM – 5:00 PM" />
-        <StatCard label="FIFA" value={`${games[1].slots.filter((s) => s.taken_by_team_id).length}/${games[1].slots.length}`} sub="11:40 AM – 5:00 PM" />
+        <StatCard label="FIFA" value={`${games[1].slots.filter((s) => s.taken_by_team_id).length}/${games[1].slots.length}`} sub="12:00 PM – 5:00 PM" />
       </div>
 
       {allSlots.length === 0 ? (
