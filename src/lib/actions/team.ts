@@ -90,7 +90,7 @@ export async function bookGameSlotAction(slotId: string): Promise<BookSlotResult
   const { data, error } = await supabase.rpc("book_game_slot", { p_slot_id: slotId })
   if (error) {
     const msg = error.message.includes("SLOT_ALREADY_BOOKED")
-      ? "Your team already booked a slot. One slot per team — that's the rule."
+      ? "Your team already booked a slot for this game. One slot per game, per team."
       : error.message.includes("SLOT_TAKEN")
         ? "Another team just grabbed that slot. Pick another one."
         : error.message.includes("SLOT_NOT_FOUND")

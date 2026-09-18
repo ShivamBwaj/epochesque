@@ -60,7 +60,7 @@ export default async function AdminGamingPage() {
       <SectionHeading
         kicker="SIDE QUEST"
         title="Gaming Slots"
-        description="Tekken (5-min slots, 11:30 AM–1:00 PM & 2:00–5:00 PM) and FIFA (15-min slots, 12:00 PM–5:00 PM). One team per slot, one slot per team — bookings are atomic, no double-booking possible. Open each game's booking independently."
+        description="Tekken (5-min slots, 11:30 AM–1:00 PM & 2:00–5:00 PM) and FIFA (15-min slots, 12:00 PM–5:00 PM). One slot per team per game — a team can hold one Tekken slot and one FIFA slot. Bookings are atomic, no double-booking possible. Open each game's booking independently."
       />
 
       <div className="grid gap-4 sm:grid-cols-2">

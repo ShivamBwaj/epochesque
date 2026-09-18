@@ -23,7 +23,7 @@ export default async function DashboardOverviewPage() {
   const final = (submissions ?? []).find((s) => s.round === "final") ?? null
   const members = team.members
   const admin = createAdminClient()
-  const { data: mySlot } = await admin.from("game_slots").select("game, start_time").eq("taken_by_team_id", team.id).maybeSingle()
+  const { data: mySlots } = await admin.from("game_slots").select("game, start_time").eq("taken_by_team_id", team.id)
 
   const deadlineTarget = team.problem_statement_id ? timing.round1_deadline : null
   const deadlineLabel = "OC ROUND 1 CLOSES IN"
@@ -67,20 +67,29 @@ export default async function DashboardOverviewPage() {
         </Card>
 
         <Card className="card-hover p-5">
-          <p className="hud-label">GAMING SLOT</p>
-          {mySlot ? (
+          <p className="hud-label">GAMING SLOT{(mySlots?.length ?? 0) > 1 ? "S" : ""}</p>
+          {mySlots && mySlots.length > 0 ? (
             <div className="mt-3 space-y-3">
-              <div className="flex items-center gap-2">
-                <Badge tone="green">BOOKED</Badge>
-                <span className="text-sm text-slate-300">
-                  {gameLabel(mySlot.game)} · {mySlot.start_time}
-                </span>
+              <div className="space-y-1">
+                {mySlots.map((s) => (
+                  <div key={s.game} className="flex items-center gap-2">
+                    <Badge tone="green">BOOKED</Badge>
+                    <span className="text-sm text-slate-300">
+                      {gameLabel(s.game)} · {s.start_time}
+                    </span>
+                  </div>
+                ))}
               </div>
-              <p className="text-xs text-slate-500">One slot per team. Show up on time.</p>
+              <p className="text-xs text-slate-500">One slot per game — you can book both. Show up on time.</p>
+              {mySlots.length < 2 ? (
+                <LinkButton href="/dashboard/gaming" variant="secondary" size="sm">
+                  Book the other game
+                </LinkButton>
+              ) : null}
             </div>
           ) : (
             <div className="mt-3 space-y-3">
-              <p className="text-sm text-slate-300">Tekken (5-min, 11:30 AM–5:00 PM) or FIFA (15-min, 12:00 PM–5:00 PM).</p>
+              <p className="text-sm text-slate-300">Tekken (5-min, 11:30 AM–5:00 PM) or FIFA (15-min, 12:00 PM–5:00 PM). Book both if you like.</p>
               <LinkButton href="/dashboard/gaming" variant="secondary" size="sm">
                 Pick your slot
               </LinkButton>

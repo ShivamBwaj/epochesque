@@ -20,20 +20,21 @@ export default async function DashboardGamingPage() {
     getEventFlags(),
   ])
 
-  const myBooking = (slots ?? []).find((s) => s.taken_by_team_id === team.id) ?? null
+  const myBookings = (slots ?? []).filter((s) => s.taken_by_team_id === team.id)
   const slotCount = (slots ?? []).length
+  const anyOpen = flags.tekkenOpen || flags.fifaOpen
 
   return (
     <div className="space-y-6">
       <SectionHeading
         kicker="SIDE QUEST"
         title="Gaming Slots"
-        description="Tekken (5-min slots, 11:30 AM–1:00 PM & 2:00–5:00 PM) or FIFA (15-min slots, 12:00 PM–5:00 PM) — a break between builds. One slot per team, one game per team. First come, first served."
+        description="Tekken (5-min slots, 11:30 AM–1:00 PM & 2:00–5:00 PM) or FIFA (15-min slots, 12:00 PM–5:00 PM) — a break between builds. One slot per team per game — you can book both. First come, first served."
       />
 
       {slotCount === 0 ? (
         <Alert tone="info">Gaming slots aren&apos;t set up yet. The organizers will open them soon.</Alert>
-      ) : !flags.tekkenOpen && !flags.fifaOpen && !myBooking ? (
+      ) : !anyOpen && myBookings.length === 0 ? (
         <Alert tone="info">Booking isn&apos;t open yet — the organizers will flip it on soon. Check back here.</Alert>
       ) : (
         <GamingPicker
@@ -45,7 +46,7 @@ export default async function DashboardGamingPage() {
               .filter((s) => s.game === game)
               .map((s) => ({ id: s.id, startTime: s.start_time, taken: s.taken_by_team_id !== null })),
           }))}
-          myBooking={myBooking ? { game: myBooking.game, startTime: myBooking.start_time, label: gameLabel(myBooking.game) } : null}
+          myBookings={myBookings.map((s) => ({ game: s.game, startTime: s.start_time, label: gameLabel(s.game) }))}
           isLeader={isLeader}
         />
       )}
