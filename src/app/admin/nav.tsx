@@ -33,6 +33,7 @@ const groups: { label: string; links: NavLink[] }[] = [
       { href: "/admin/final", label: "Final Repos" },
       { href: "/admin/scoring", label: "Scoring" },
       { href: "/leaderboard", label: "Leaderboard" },
+      { href: "/leaderboard/podium", label: "Podium" },
       { href: "/admin/announce-winners", label: "Winners" },
     ],
   },
