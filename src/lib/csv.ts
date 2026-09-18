@@ -56,8 +56,8 @@ export function parseScoresCsv(text: string): ScoresParseResult {
       continue
     }
     const num = Number(score)
-    if (!Number.isFinite(num) || num < 0 || num > 10) {
-      invalid.push({ line: lineNo, text: lines[i], reason: "invalid score (must be 0–10)" })
+    if (!Number.isFinite(num) || num < 0 || num > 100) {
+      invalid.push({ line: lineNo, text: lines[i], reason: "invalid score (must be 0–100)" })
       continue
     }
     rows.push({ team_code: code, score, notes: notes.slice(0, 500) })

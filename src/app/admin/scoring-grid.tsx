@@ -233,7 +233,7 @@ export function ScoringGrid({
                             type="number"
                             step="0.01"
                             min={0}
-                            max={10}
+                            max={round === "final" ? 100 : 10}
                             name={`score_${t.id}`}
                             defaultValue={ex ? String(ex.total_score) : ""}
                             onChange={() => markDirty(t.id, "score")}

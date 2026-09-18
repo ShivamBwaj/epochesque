@@ -24,15 +24,19 @@ function sortRows(rows: LeaderboardEntry[]): LeaderboardEntry[] {
 }
 
 // Weighted composite of whatever's been scored so far -- 10% quiz + 20% OC
-// round + 70% senior final, each out of 10, scaled up to a 0-100 total (a
-// team acing every round shows 100, not 10). A round that hasn't happened
-// yet contributes 0, same as every other "current standing" table on this
-// site; this is NOT the same as leaderboard_final_public, which stays empty
-// until an admin explicitly publishes the final round (that gate is for the
-// public podium reveal, not for ranking teams against each other mid-event).
+// round + 70% senior final, landing on a 0-100 total (a team acing every
+// round shows 100). Quiz and OC round are stored out of 10 (so *0.1*10 =
+// *1 and *0.2*10 = *2 to land on the 0-100 scale); the senior final is
+// stored out of 100 already (its own rubric is out of 50, doubled on
+// import), so its 70% weight applies directly with no extra rescale. A
+// round that hasn't happened yet contributes 0, same as every other
+// "current standing" table on this site; this is NOT the same as
+// leaderboard_final_public, which stays empty until an admin explicitly
+// publishes the final round (that gate is for the public podium reveal,
+// not for ranking teams against each other mid-event).
 function weightedTotal(quiz: number | null, ocRound: number | null, finalRound: number | null): number | null {
   if (quiz === null && ocRound === null && finalRound === null) return null
-  return Math.round(((quiz ?? 0) * 0.1 + (ocRound ?? 0) * 0.2 + (finalRound ?? 0) * 0.7) * 10 * 100) / 100
+  return Math.round(((quiz ?? 0) * 1 + (ocRound ?? 0) * 2 + (finalRound ?? 0) * 0.7) * 100) / 100
 }
 
 function buildUnifiedRows(

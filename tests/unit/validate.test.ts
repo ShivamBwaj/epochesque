@@ -21,10 +21,10 @@ describe("parseScoresCsv", () => {
     expect(res.rows[0].team_code).toBe("T-04")
     expect(res.invalid).toHaveLength(4)
     expect(res.invalid.map((v) => v.reason)).toEqual([
-      "invalid score (must be 0–10)",
+      "invalid score (must be 0–100)",
       "missing team code",
-      "invalid score (must be 0–10)",
-      "invalid score (must be 0–10)",
+      "invalid score (must be 0–100)",
+      "invalid score (must be 0–100)",
     ])
   })
 
