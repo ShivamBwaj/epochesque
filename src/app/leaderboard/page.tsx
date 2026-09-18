@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdminPage } from "@/lib/auth"
 import { Badge, Card, EmptyState, SectionHeading } from "@/components/ui"
 import type { Json, LeaderboardEntry, WinnersEntry } from "@/lib/database.types"
@@ -87,13 +88,15 @@ interface UnifiedRow {
   total: number | null
   rank: number | null
   projectUrl: string | null
+  track: string | null
 }
 
 function buildUnifiedRows(
   round1: LeaderboardEntry[],
   round2: LeaderboardEntry[],
   final: LeaderboardEntry[],
-  projectByCode: Map<string, string>
+  projectByCode: Map<string, string>,
+  trackByTeamId: Map<string, string | null>
 ): UnifiedRow[] {
   const byTeam = new Map<string, UnifiedRow>()
   const ensure = (r: LeaderboardEntry) => {
@@ -109,6 +112,7 @@ function buildUnifiedRows(
         total: null,
         rank: null,
         projectUrl: r.team_code ? projectByCode.get(r.team_code) ?? null : null,
+        track: trackByTeamId.get(r.team_id) ?? null,
       }
       byTeam.set(r.team_id, row)
     }
@@ -134,14 +138,20 @@ function buildUnifiedRows(
   )
 }
 
-function UnifiedLeaderboard({ rows }: { rows: UnifiedRow[] }) {
+function UnifiedLeaderboard({
+  rows,
+  kicker = "LEADERBOARD",
+  title = "Every round, one table",
+  description = "Quiz (10%) + OC Round (20%) + Senior Final (70%, folded into Total). A column shows 🔒 until that round's score is entered and published.",
+}: {
+  rows: UnifiedRow[]
+  kicker?: string
+  title?: string
+  description?: string
+}) {
   return (
     <section>
-      <SectionHeading
-        kicker="LEADERBOARD"
-        title="Every round, one table"
-        description="Quiz (10%) + OC Round (20%) + Senior Final (70%, folded into Total). A column shows 🔒 until that round's score is entered and published."
-      />
+      <SectionHeading kicker={kicker} title={title} description={description} />
       {rows.length === 0 ? (
         <EmptyState icon="🔒" title="Nothing published yet" description="Rows appear here the moment any round is scored and published." />
       ) : (
@@ -194,12 +204,15 @@ function UnifiedLeaderboard({ rows }: { rows: UnifiedRow[] }) {
 export default async function LeaderboardPage() {
   await requireAdminPage()
   const supabase = await createClient()
-  const [round1Res, round2Res, finalRes, winnersRes, projectsRes] = await Promise.all([
+  const admin = createAdminClient()
+  const [round1Res, round2Res, finalRes, winnersRes, projectsRes, teamsRes, psRes] = await Promise.all([
     supabase.from("leaderboard_round1_public").select("*"),
     supabase.from("leaderboard_round2_public").select("*"),
     supabase.from("leaderboard_final_public").select("*"),
     supabase.from("winners_public").select("*"),
     supabase.from("project_pages_public").select("team_code"),
+    admin.from("teams").select("id, problem_statement_id"),
+    admin.from("problem_statements").select("id, code"),
   ])
 
   const round1 = sortRows(round1Res.data ?? [])
@@ -208,7 +221,27 @@ export default async function LeaderboardPage() {
   const projectByCode = new Map(
     (projectsRes.data ?? []).filter((p) => p.team_code).map((p) => [p.team_code as string, `/projects/${p.team_code}`])
   )
-  const unifiedRows = buildUnifiedRows(round1, round2, final, projectByCode)
+  const psCodeById = new Map((psRes.data ?? []).map((p) => [p.id, p.code]))
+  const trackByTeamId = new Map(
+    (teamsRes.data ?? []).map((t) => [t.id, t.problem_statement_id ? psCodeById.get(t.problem_statement_id) ?? null : null])
+  )
+  const unifiedRows = buildUnifiedRows(round1, round2, final, projectByCode, trackByTeamId)
+  const tracks = [...new Set([...psCodeById.values()])].sort()
+  const rowsByTrack = new Map<string, UnifiedRow[]>()
+  const unassigned: UnifiedRow[] = []
+  for (const row of unifiedRows) {
+    if (row.track) {
+      const arr = rowsByTrack.get(row.track) ?? []
+      arr.push(row)
+      rowsByTrack.set(row.track, arr)
+    } else {
+      unassigned.push(row)
+    }
+  }
+  const reRank = (rows: UnifiedRow[]) =>
+    [...rows]
+      .sort((a, b) => (b.total ?? -1) - (a.total ?? -1))
+      .map((r, i) => ({ ...r, rank: i + 1 }))
   const winnerRows = (winnersRes.data ?? [])
     .filter((w) => w.body != null)
     .sort((a, b) => (b.published_at ?? "").localeCompare(a.published_at ?? ""))
@@ -233,7 +266,24 @@ export default async function LeaderboardPage() {
         </section>
       ) : null}
 
-      <UnifiedLeaderboard rows={unifiedRows} />
+      {tracks.map((track) => (
+        <UnifiedLeaderboard
+          key={track}
+          rows={reRank(rowsByTrack.get(track) ?? [])}
+          kicker={`LEADERBOARD · ${track.toUpperCase()}`}
+          title={track}
+          description="Quiz (10%) + OC Round (20%) + Senior Final (70%, folded into Total), ranked within this track only. A column shows 🔒 until that round's score is entered and published."
+        />
+      ))}
+
+      {unassigned.length > 0 ? (
+        <UnifiedLeaderboard
+          rows={reRank(unassigned)}
+          kicker="LEADERBOARD · UNASSIGNED"
+          title="No track rolled yet"
+          description="Teams that haven't rolled a problem statement yet, so they can't be grouped by track."
+        />
+      ) : null}
     </div>
   )
 }
