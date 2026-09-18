@@ -4,32 +4,32 @@ import { deckFileError, deckMagicError, sanitizeFileName } from "@/lib/validate"
 
 describe("parseScoresCsv", () => {
   it("parses headered CSV", () => {
-    const res = parseScoresCsv("Team Code,Score,Notes\nT-01,87.5,great pitch\nT-02,90,\n")
+    const res = parseScoresCsv("Team Code,Score,Notes\nT-01,8.5,great pitch\nT-02,9,\n")
     expect(res.rows).toHaveLength(2)
-    expect(res.rows[0]).toEqual({ team_code: "T-01", score: "87.5", notes: "great pitch" })
+    expect(res.rows[0]).toEqual({ team_code: "T-01", score: "8.5", notes: "great pitch" })
     expect(res.invalid).toHaveLength(0)
   })
 
   it("parses headerless CSV", () => {
-    const res = parseScoresCsv("T-01,87.5\nT-02,90\n")
+    const res = parseScoresCsv("T-01,8.5\nT-02,9\n")
     expect(res.rows).toHaveLength(2)
   })
 
   it("rejects bad scores and missing codes", () => {
-    const res = parseScoresCsv("T-01,abc\n,50\nT-02,-5\nT-03,99999\nT-04,72\n")
+    const res = parseScoresCsv("T-01,abc\n,5\nT-02,-5\nT-03,99999\nT-04,7.2\n")
     expect(res.rows).toHaveLength(1)
     expect(res.rows[0].team_code).toBe("T-04")
     expect(res.invalid).toHaveLength(4)
     expect(res.invalid.map((v) => v.reason)).toEqual([
-      "invalid score (must be 0–10000)",
+      "invalid score (must be 0–10)",
       "missing team code",
-      "invalid score (must be 0–10000)",
-      "invalid score (must be 0–10000)",
+      "invalid score (must be 0–10)",
+      "invalid score (must be 0–10)",
     ])
   })
 
   it("handles CRLF and quoted notes", () => {
-    const res = parseScoresCsv('team,score,notes\r\nT-01,50,"solid, clean"\r\n')
+    const res = parseScoresCsv('team,score,notes\r\nT-01,5,"solid, clean"\r\n')
     expect(res.rows[0].notes).toBe("solid, clean")
   })
 })

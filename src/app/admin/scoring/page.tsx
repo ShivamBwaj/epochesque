@@ -41,7 +41,7 @@ export default async function AdminScoringPage({ searchParams }: { searchParams:
       <SectionHeading
         kicker="JUDGING"
         title="Scoring"
-        description="Scores per round per team. The final leaderboard is weighted: 10% Round 1 (Quiz) + 20% Round 2 (OC Round) + 70% Senior Final Evaluation. Several people can score different teams at the same time — only edited rows are saved."
+        description="Enter each team's raw score out of 10 per round. The final leaderboard weights them: 10% Round 1 (Quiz) + 20% Round 2 (OC Round) + 70% Senior Final Evaluation. Several people can score different teams at the same time — only edited rows are saved."
       />
       <div className="flex flex-wrap gap-2">
         {ROUNDS.map((r) => (
