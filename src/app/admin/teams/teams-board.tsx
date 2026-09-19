@@ -17,8 +17,6 @@ import { TeamCard } from "./team-card"
 import { UnassignedPanel } from "./unassigned-panel"
 import type { RosterTeam } from "./page"
 
-const POLL_MS = 2500
-
 interface UnassignedPerson {
   id: string
   regNo: string
@@ -61,18 +59,17 @@ export function TeamsBoard({
     setMembers(server.map((m) => (pending.has(m.registrationId) ? { ...m, present: pending.get(m.registrationId)! } : m)))
   }, [])
 
+  // Event's over -- no more live sync needed. Fetch once per day-tab switch
+  // instead of polling every 2.5s (that alone was a meaningful chunk of the
+  // Netlify function-compute bill during the live event).
   useEffect(() => {
     let cancelled = false
-    const tick = async () => {
-      if (cancelled || document.hidden) return
+    void (async () => {
       const res = await fetchAttendanceStateAction(day)
       if (!cancelled && res.ok && res.members) applyServerState(res.members)
-    }
-    void tick()
-    const id = setInterval(tick, POLL_MS)
+    })()
     return () => {
       cancelled = true
-      clearInterval(id)
     }
   }, [day, applyServerState])
 
@@ -188,7 +185,7 @@ export function TeamsBoard({
         <StatCard label="Registrations" value={String(unassigned.length + rosterTeams.reduce((n, t) => n + t.members.length, 0))} sub="Everyone in the sheet" />
         <StatCard label="Teams" value={String(rosterTeams.length)} sub={`${incompleteCount} incomplete`} />
         <StatCard label="Unassigned" value={String(unassigned.length)} sub="Not on a team yet" />
-        <StatCard label={`Day ${day} present`} value={String(presentCount)} sub={`of ${members.length} · live, ${POLL_MS / 1000}s sync`} />
+        <StatCard label={`Day ${day} present`} value={String(presentCount)} sub={`of ${members.length}`} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

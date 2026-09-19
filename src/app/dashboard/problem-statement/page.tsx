@@ -4,7 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { getEventTiming, getEventFlags, rollIsOpen } from "@/lib/settings"
 import { rollProblemStatementAction } from "@/lib/actions/team"
 import { Alert, Badge, Card, Prose, SectionHeading } from "@/components/ui"
-import { AutoRefresh } from "@/components/auto-refresh"
 import { CaseOpener } from "@/components/case-opener"
 import { Countdown } from "@/components/countdown"
 import { formatIST as fmt } from "@/lib/format-date"
@@ -79,12 +78,11 @@ export default async function ProblemStatementPage() {
           title="Problem Statement"
           description="Rolling opens for every team at the same time — no stage, no waiting in line."
         />
-        <AutoRefresh intervalMs={15000} />
         <Card className="ring-glow mx-auto max-w-xl p-8 text-center md:p-10">
           <span className="inline-block text-5xl">🎁</span>
           <p className="hud-label mt-5">ROLLING ISN&apos;T OPEN YET</p>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            The organizers will flip the switch soon — this page updates itself the moment it opens, no refresh needed.
+            The organizers will flip the switch soon — refresh this page once it opens.
           </p>
           {timing.ps_release_at ? (
             <div className="mt-6">
